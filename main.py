@@ -1,5 +1,8 @@
 #!python3
 
+# must import it first
+import log
+
 import logging
 import os
 import signal
@@ -18,10 +21,6 @@ import transport
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
-
-logging.basicConfig(
-    stream=sys.stdout, level=logging.DEBUG, format="%(levelname)s - %(message)s"
-)
 
 
 def init():
@@ -131,9 +130,8 @@ def add_contact(name, ip, key_file, key, auto):
         contact_key = key
     if key_file:
         with open(key_file, "r") as f:
-            f.read()
-            contact_key = key
-    db.DB.add_contact_with_key(name, ip, bytes(contact_key, encoding="utf-8"))
+            contact_key = f.read().strip()
+    db.DB.add_contact_with_key(name, ip, str(contact_key, encoding="utf-8"))
 
 
 @contacts_group.command("show")
@@ -142,7 +140,7 @@ def add_contact(name, ip, key_file, key, auto):
 @click.option("--show-key", is_flag=True)
 def show_contact(name, ip, show_key):
     def display_contacts(contacts: list):
-        logging.info(tabulate.tabulate(contacts, headers=["Name", "IP", "Key"]))
+        print(tabulate.tabulate(contacts, headers=["Name", "IP", "Key"]))
 
     if not name and not ip:
         all_contacts = db.DB.fetch_all_contacts()
@@ -172,8 +170,10 @@ def send_message(name):
         return
 
     text = input("Enter your message: ")
-    sender = transport.Sender(contact)
-    sender.transmit(text)
+    transmitter = transport.Transmitter()
+    transmitter.transmit(text)
+
+
 
 
 if __name__ == "__main__":

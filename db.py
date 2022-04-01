@@ -34,7 +34,8 @@ class DB:
         " (id VARCHAR(40) PRIMARY KEY,"
         " sender VARCHAR (15) NOT NULL REFERENCES contacts(ip) ON DELETE CASCADE ON UPDATE CASCADE,"
         " body TEXT NOT NULL,"
-        " read BOOLEAN NOT NULL DEFAULT FALSE,"
+        " received BOOLEAN NOT NULL DEFAULT FALSE,"
+        " seen BOOLEAN NOT NULL DEFAULT FALSE,"
         " decrypted BOOLEAN)"
     )
 
@@ -95,7 +96,7 @@ class DB:
     """Daemon"""
 
     @staticmethod
-    def insert_pid(daemon, pid):
+    def insert_pid(daemon: str, pid):
         return DB._execute(DB._INSERT_PID, daemon=daemon, pid=pid)
 
     @staticmethod
@@ -109,11 +110,11 @@ class DB:
     """Contacts"""
 
     @staticmethod
-    def add_contact_with_key(name, ip, key):
+    def add_contact_with_key(name: str, ip: str, key: str):
         return DB._execute(DB._INSERT_CONTACT_WITH_KEY, name=name, ip=ip, key=key)
 
     @staticmethod
-    def fetch_contact_by_name(name):
+    def fetch_contact_by_name(name: str):
         row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_NAME, name=name)
         contact = None
         if row:
@@ -121,7 +122,7 @@ class DB:
         return contact
 
     @staticmethod
-    def fetch_contact_by_ip(ip):
+    def fetch_contact_by_ip(ip: str):
         row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_IP, ip=ip)
         contact = None
         if row:
@@ -136,5 +137,11 @@ class DB:
     """Messages"""
 
     @staticmethod
-    def insert_message(msg_id, sender, body, decrypted):
-        return DB._execute(DB._INSERT_NEW_MESSAGE, id=msg_id, sender=sender, body=body, decrypted=decrypted)
+    def insert_message(msg_id: str, sender: str, body: str, decrypted: bool):
+        return DB._execute(
+            DB._INSERT_NEW_MESSAGE,
+            id=msg_id,
+            sender=sender,
+            body=body,
+            decrypted=decrypted,
+        )

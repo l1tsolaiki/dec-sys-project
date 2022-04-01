@@ -44,20 +44,29 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle_message(self, data):
         logging.info("Handling message..")
         my_ip = self.request.getsockname()[0]
-        if my_ip in data['chain']:
-            logging.info('Drop message, because I(%s) am in chain already')
+        if my_ip in data["chain"]:
+            logging.info("Drop message, because I(%s) am in chain already")
             return
-        if my_ip == data['to']:
+        if my_ip == data["to"]:
             self.save_message(data)
-            logging.info('Saved message')
+            logging.info("Saved message")
+            return
+        transmitter = transport.Transmitter()
 
     def save_message(self, data):
-        body = data['body']
+        body = data["body"]
+        decrypted = False
 
-        contact = db.DB.fetch_contact_by_ip(data['from'])
+        contact = db.DB.fetch_contact_by_ip(data["from"])
         if contact:
-            decrypted = encryption.Encryptor(contact.key).decrypt(bytes(body, encoding='utf-8')).decode('utf-8')
-            logging.info('decrypted body: %s', decrypted)
+            body = (
+                encryption.Encryptor(contact.key)
+                .decrypt(bytes(body, encoding="utf-8"))
+                .decode("utf-8")
+            )
+            decrypted = True
+
+        db.DB.insert_message(data["id"], data["from"], body, decrypted)
 
 
 if __name__ == "__main__":
