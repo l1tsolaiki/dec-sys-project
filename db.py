@@ -43,7 +43,8 @@ class DB:
         "INSERT INTO contacts (name, ip, key) VALUES (:name, :ip, :key)"
     )
 
-    _FETCH_CONTACT_BY_NAME = "SELECT name, ip, key FROM contacts WHERE" " name = :name"
+    _FETCH_CONTACT_BY_NAME = "SELECT name, ip, key FROM contacts WHERE name = :name"
+    _FETCH_CONTACT_BY_IP = "SELECT name, ip, key FROM contacts WHERE ip = :ip"
 
     @staticmethod
     def _execute(query, **kwargs):
@@ -84,6 +85,14 @@ class DB:
     @staticmethod
     def fetch_contact_by_name(name):
         row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_NAME, name=name)
+        contact = None
+        if row:
+            contact = models.Contact(*row)
+        return contact
+
+    @staticmethod
+    def fetch_contact_by_ip(ip):
+        row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_NAME, ip=ip)
         contact = None
         if row:
             contact = models.Contact(*row)

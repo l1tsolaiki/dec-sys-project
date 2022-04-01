@@ -1,4 +1,5 @@
 #!python3
+import socket
 
 import click
 import os
@@ -10,6 +11,7 @@ import sys
 import db
 import consts
 import encryption
+import transport
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -74,7 +76,7 @@ def daemon_up():
 
 @daemon.command("down")
 def daemon_down():
-    res = db.DB.fetch_pid(daemon="daemon")
+    res = db.DB.fetch_pid("daemon")
 
     if res is None:
         print("Daemon is not running")
@@ -87,7 +89,7 @@ def daemon_down():
         print(f"Daemon shut down")
     except ProcessLookupError:
         print("Looks like daemon was not running")
-    db.DB.delete_pid(daemon="daemon")
+    db.DB.delete_pid("daemon")
 
 
 @cli.group()
@@ -128,11 +130,11 @@ def add_contact(name, ip, key_file, key, auto):
 
 
 @cli.group()
-def messages():
+def message():
     """Manage messaged"""
 
 
-@messages.command("send")
+@message.command("send")
 @click.argument("name")
 def send_message(name):
     contact = db.DB.fetch_contact_by_name(name)
@@ -140,8 +142,13 @@ def send_message(name):
         print(f"Could not find contact '{name}'")
         return
 
+    tcp = transport.Transport(transport.Transport.create_socket(), contact)
     text = input("Enter your message: ")
     print(contact, text)
+    try:
+        tcp.send({"msg": text})
+    except socket.timeout:
+        print(f"Could not reach {contact.name} on {contact.ip}")
 
 
 if __name__ == "__main__":

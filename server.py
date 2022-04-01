@@ -1,13 +1,12 @@
-#!/usr/bin/python3
-
 import argparse
 import logging
 import signal
 import socketserver
-import sys
 import threading
 
-from threading import Thread
+import db
+import transport
+
 
 logging.basicConfig(level=logging.INFO, filename="server.log")
 
@@ -23,15 +22,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         # self.request is the TCP socket connected to the client
-        self.data = self.request.recv(1024).strip()
+        contact = db.DB.fetch_contact_by_ip(self.client_address[0])
+        tcp = transport.Transport(self.request, contact)
+        data = tcp.receive_all()
         logging.info("{} wrote:".format(self.client_address[0]))
-        logging.info(self.data)
+        logging.info(data)
         # just send back the same data, but upper-cased
-        self.request.sendall(self.data.upper())
-
-
-def print_thread_id():
-    logging.info("Thread id = %s", threading.get_native_id())
+        tcp.send(data)
 
 
 if __name__ == "__main__":
@@ -53,7 +50,7 @@ if __name__ == "__main__":
             server.shutdown()
             logging.info("Server shut down")
 
-        server_thread = Thread(target=server.serve_forever)
+        server_thread = threading.Thread(target=server.serve_forever)
         signal.signal(signal.SIGTERM, signal_handler)
         server_thread.start()
 
