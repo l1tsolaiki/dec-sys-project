@@ -11,70 +11,76 @@ import models
 import transport
 
 
-logging.basicConfig(level=logging.INFO, filename="server.log")
+logging.basicConfig(level=logging.INFO, filename='server.log')
 
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
-    """
+    '''
     The request handler class for our server.
 
     It is instantiated once per connection to the server, and must
     override the handle() method to implement communication to the
     client.
-    """
+    '''
 
     def handle(self):
         # self.request is the TCP socket connected to the client
-        logging.info("Handle request")
+        logging.info('Handle request')
         peer = db.DB.fetch_peer_by_ip(self.client_address[0])
         tcp = transport.Transport(self.request, peer)
         data = tcp.receive_all()
         logging.info(
-            "Received message from ip=%s, msg=%s", self.client_address[0], data
+            'Received message from ip=%s, msg=%s', self.client_address[0], data
         )
         self.dispatch(data)
-        # just send back the same data, but upper-cased
-        tcp.send(data)
 
     def dispatch(self, data):
-        msg_type = data["type"]
+        msg_type = data['type']
+        peer = db.DB.fetch_peer_by_id(data['from'])
+        if not peer:
+            db.DB.add_peer_only_required(data['from'], data['from'])
         if msg_type == models.MessageType.MESSAGE.value:
-            self.handle_message(data)
+            self.handle_message(data, peer)
 
-    def handle_message(self, data):
-        logging.info("Handling message..")
+    def handle_message(self, data, peer):
+        logging.info('Handling message..')
         my_peer_id = db.get_peer_id()
-        if my_peer_id in data["chain"]:
-            logging.info("Drop message, because I(%s) am in chain already")
+        if my_peer_id in data['chain']:
+            logging.info('Drop message, because I(%s) am in chain already')
             return
-        if my_peer_id == data["to"]:
-            self.save_message(data)
-            logging.info("Saved message")
-            return
+
         transmitter = transport.Transmitter()
 
+        if my_peer_id == data['to']:
+            self.save_message(data)
+            logging.info('Saved message')
+            msg = {'id': data['id'], 'type': models.MessageType.ACK}
+            transmitter.transmit()
+            return
+        transmitter.retransmit(data)
+
     def save_message(self, data):
-        body = data["body"]
+        body = data['body']
         decrypted = False
 
-        peer = db.DB.fetch_peer_by_ip(data["from"])
+        peer = db.DB.fetch_peer_by_id(data['from'])
         if peer:
             body = (
                 encryption.Encryptor(peer.key)
-                .decrypt(bytes(body, encoding="utf-8"))
-                .decode("utf-8")
+                .decrypt(bytes(body, encoding='utf-8'))
+                .decode('utf-8')
             )
             decrypted = True
         else:
+            db.DB.add_peer_only_required(data['from'], data['from'])
+
+        db.DB.insert_message(data['id'], data['from'], body, decrypted)
 
 
-        db.DB.insert_message(data["id"], data["from"], body, decrypted)
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("host")
-    parser.add_argument("port", type=int)
+    parser.add_argument('host')
+    parser.add_argument('port', type=int)
 
     args = parser.parse_args()
     host, port = args.host, args.port
@@ -84,14 +90,14 @@ if __name__ == "__main__":
 
         def signal_handler(sig, frame):
             logging.info(
-                "Server gracefully shutting down; thread_id=%s",
+                'Server gracefully shutting down; thread_id=%s',
             )
             server.shutdown()
-            logging.info("Server shut down")
+            logging.info('Server shut down')
 
         server_thread = threading.Thread(target=server.serve_forever)
         signal.signal(signal.SIGTERM, signal_handler)
-        logging.info("Start server, pid=%s", os.getpid())
+        logging.info('Start server, pid=%s', os.getpid())
         server_thread.start()
 
         signal.pause()

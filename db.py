@@ -16,31 +16,29 @@ def get_cursor():
 
 class DB:
 
-    """Init"""
+    '''Init'''
 
-    _CREATE_DAEMON_TABLE = (
-        "CREATE TABLE settings (settings_key VARCHAR(50) PRIMARY KEY, settings_value VARCHAR(50))"
-    )
+    _CREATE_DAEMON_TABLE = 'CREATE TABLE settings (settings_key VARCHAR(50) PRIMARY KEY, settings_value VARCHAR(50))'
 
     _CREATE_PEERS_TABLE = (
-        "CREATE TABLE peers"
-        " (peer_id VARCHAR(40) PRIMARY KEY,"
-        " ip VARCHAR(15) NOT NULL,"
-        " name VARCHAR(40) NOT NULL UNIQUE,"
-        " key TEXT NOT NULL)"
+        'CREATE TABLE peers'
+        ' (peer_id VARCHAR(40) PRIMARY KEY,'
+        ' ip VARCHAR(15),'
+        ' name VARCHAR(40) NOT NULL UNIQUE,'
+        ' key TEXT NOT NULL)'
     )
 
     _CREATE_MESSAGES_TABLE = (
-        "CREATE TABLE messages"
-        " (id VARCHAR(40) PRIMARY KEY,"
-        " sender VARCHAR (40) NOT NULL REFERENCES peers(peer_id) ON DELETE RESTRICT,"
-        " body TEXT NOT NULL,"
-        " received BOOLEAN NOT NULL DEFAULT FALSE,"
-        " seen BOOLEAN NOT NULL DEFAULT FALSE,"
-        " decrypted BOOLEAN)"
+        'CREATE TABLE messages'
+        ' (id VARCHAR(40) PRIMARY KEY,'
+        ' sender VARCHAR (40) NOT NULL REFERENCES peers(peer_id) ON DELETE RESTRICT,'
+        ' body TEXT NOT NULL,'
+        ' received BOOLEAN NOT NULL DEFAULT FALSE,'
+        ' seen BOOLEAN NOT NULL DEFAULT FALSE,'
+        ' decrypted BOOLEAN)'
     )
 
-    _CREATE_MESSAGES_INDEX = "CREATE INDEX IF NOT EXISTS unread ON messages(seen ASC)"
+    _CREATE_MESSAGES_INDEX = 'CREATE INDEX IF NOT EXISTS unread ON messages(seen ASC)'
 
     _INIT_QUERIES = [
         _CREATE_DAEMON_TABLE,
@@ -49,36 +47,42 @@ class DB:
         _CREATE_MESSAGES_INDEX,
     ]
 
-    """Settings"""
+    '''Settings'''
 
     _INSERT_SETTING = (
-        "INSERT INTO settings(settings_key, settings_value) VALUES (:settings_key, :settings_value)"
-        " ON CONFLICT(settings_key) DO UPDATE SET"
-        " settings_value = :settings_value"
-        " WHERE settings_key = :settings_key"
+        'INSERT INTO settings(settings_key, settings_value) VALUES (:settings_key, :settings_value)'
+        ' ON CONFLICT(settings_key) DO UPDATE SET'
+        ' settings_value = :settings_value'
+        ' WHERE settings_key = :settings_key'
     )
 
-    _DELETE_SETTING = "DELETE FROM settings WHERE settings_key = :settings_key"
+    _DELETE_SETTING = 'DELETE FROM settings WHERE settings_key = :settings_key'
 
-    _FIND_PID = "SELECT settings_value FROM settings WHERE settings_key = :settings_key"
+    _FIND_PID = 'SELECT settings_value FROM settings WHERE settings_key = :settings_key'
 
-    """Peers"""
+    '''Peers'''
 
     _INSERT_PEER_WITH_KEY = (
-        "INSERT INTO peers (peer_id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
+        'INSERT INTO peers (peer_id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)'
     )
-    _INSERT_PEER_WITHOUT = (
-        "INSERT INTO peers (peer_id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
+    _INSERT_PEER_ONLY_REQUIRED = (
+        'INSERT INTO peers (peer_id, name) VALUES (:peer_id, :name)'
     )
 
-    _FETCH_PEER_BY_NAME = "SELECT name, ip, key FROM peers WHERE name = :name"
-    _FETCH_PEER_BY_IP = "SELECT name, ip, key FROM peers WHERE ip = :ip"
-    _FETCH_ALL_PEERS = "SELECT name, ip, key FROM peers"
+    _FETCH_PEER_BY_NAME = 'SELECT name, ip, key FROM peers WHERE name = :name'
+    _FETCH_PEER_BY_IP = 'SELECT name, ip, key FROM peers WHERE ip = :ip'
+    _FETCH_PEER_BY_ID = 'SELECT name, ip, key FROM peers WHERE peer_id = :peer_id'
+    _FETCH_ALL_PEERS = 'SELECT name, ip, key FROM peers'
 
-    """Messages"""
+    '''Messages'''
+
     _INSERT_NEW_MESSAGE = (
-        "INSERT INTO messages (id, sender, body, decrypted)"
-        " VALUES (:id, :sender, :body, :decrypted)"
+        'INSERT INTO messages (id, sender, body, decrypted)'
+        ' VALUES (:id, :sender, :body, :decrypted)'
+    )
+
+    _FETCH_UNREAD_MESSAGES = (
+        'SELECT id, sender, body, decrypted FROM messages WHERE seen = false'
     )
 
     @staticmethod
@@ -96,7 +100,7 @@ class DB:
         with get_cursor() as cursor:
             return cursor.execute(query, kwargs).fetchone()
 
-    """Init"""
+    '''Init'''
 
     @staticmethod
     def initialize():
@@ -104,7 +108,7 @@ class DB:
             for query in DB._INIT_QUERIES:
                 cursor.execute(query)
 
-    """Daemon"""
+    '''Daemon'''
 
     @staticmethod
     def insert_setting(key: str, value: str):
@@ -118,11 +122,19 @@ class DB:
     def delete_setting(key):
         return DB._execute_fetchone(DB._DELETE_SETTING, settings_key=key)
 
-    """Peers"""
+    '''Peers'''
 
     @staticmethod
     def add_peer_with_key(peer_id: str, name: str, ip: str, key: str):
-        return DB._execute(DB._INSERT_PEER_WITH_KEY, peer_id=peer_id, name=name, ip=ip, key=key)
+        return DB._execute(
+            DB._INSERT_PEER_WITH_KEY, peer_id=peer_id, name=name, ip=ip, key=key
+        )
+
+    @staticmethod
+    def add_peer_only_required(peer_id: str, name: str):
+        return DB._execute(
+            DB._INSERT_PEER_WITHOUT_KEY, peer_id=peer_id, name=name, ip=ip
+        )
 
     @staticmethod
     def fetch_peer_by_name(name: str):
@@ -141,11 +153,19 @@ class DB:
         return peer
 
     @staticmethod
+    def fetch_peer_by_id(peer_id: str):
+        row = DB._execute_fetchone(DB._FETCH_PEER_BY_ID, peer_id=peer_id)
+        peer = None
+        if row:
+            peer = models.Peer(*row)
+        return peer
+
+    @staticmethod
     def fetch_all_peers():
         rows = DB._execute_fetchall(DB._FETCH_ALL_PEERS)
         return [models.Peer(*row) for row in rows]
 
-    """Messages"""
+    '''Messages'''
 
     @staticmethod
     def insert_message(msg_id: str, sender: str, body: str, decrypted: bool):
@@ -156,6 +176,10 @@ class DB:
             body=body,
             decrypted=decrypted,
         )
+
+    @staticmethod
+    def fetch_unread_messages():
+        return DB._execute_fetchall(DB._FETCH_UNREAD_MESSAGES)
 
 
 def get_peer_id():

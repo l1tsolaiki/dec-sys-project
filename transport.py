@@ -21,7 +21,7 @@ class Transport:
         self.sck.sendall(encrypted)
 
     def receive_all(self):
-        data = b""
+        data = b''
         while True:
             received = self.sck.recv(consts.SCK_BUFF_SIZE)
             if len(received) < 1:
@@ -37,11 +37,11 @@ class Transport:
 
     @staticmethod
     def _dump_to_bytes(message: dict) -> bytes:
-        return bytes(json.dumps(message), encoding="utf-8")
+        return bytes(json.dumps(message), encoding='utf-8')
 
     @staticmethod
     def _load_from_bytes(message: bytes) -> dict:
-        return json.loads(str(message, encoding="utf-8"))
+        return json.loads(str(message, encoding='utf-8'))
 
     @staticmethod
     def create_socket():
@@ -57,9 +57,11 @@ class Transmitter:
         msg = init
 
         if msg.get('body'):
-            msg['body'] = encryption.Encryptor(target.key).encrypt(
-                msg['body'].encode('utf-8')
-            ).decode('utf-8')
+            msg['body'] = (
+                encryption.Encryptor(target.key)
+                .encrypt(msg['body'].encode('utf-8'))
+                .decode('utf-8')
+            )
 
         return self.send_to_every_peer(msg)
 
@@ -74,7 +76,7 @@ class Transmitter:
                 self.send(peer, msg)
                 success += 1
             except (socket.timeout, ConnectionRefusedError):
-                logging.info(f"Cannot reach {peer.name} on {peer.ip}")
+                logging.info(f'Cannot reach {peer.name} on {peer.ip}')
         return success
 
     def send(self, peer: models.Peer, msg: dict):
@@ -84,13 +86,13 @@ class Transmitter:
     def default_msg_dict(self, target: models.Peer):
         my_peer_id = db.get_peer_id()
         return {
-            "id": uuid.uuid4().hex,
-            "from": my_peer_id,
-            "to": target.peer_id,
-            "chain": [my_peer_id],
+            'id': uuid.uuid4().hex,
+            'from': my_peer_id,
+            'to': target.peer_id,
+            'chain': [my_peer_id],
         }
 
     def update_chain(self, message_dict: dict):
         my_peer_id = db.get_peer_id()
-        message_dict["chain"].append(my_peer_id)
+        message_dict['chain'].append(my_peer_id)
         return message_dict

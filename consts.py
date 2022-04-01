@@ -1,6 +1,6 @@
-DAEMON_HOST = "0.0.0.0"
-DAEMON_PORT = "41479"
-DB_NAME = "messenger.db"
+DAEMON_HOST = '0.0.0.0'
+DAEMON_PORT = '41479'
+DB_NAME = 'messenger.db'
 
 SCK_TIMEOUT = 0.3
 SCK_BUFF_SIZE = 512
