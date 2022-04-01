@@ -92,7 +92,7 @@ class DB:
 
     @staticmethod
     def fetch_contact_by_ip(ip):
-        row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_NAME, ip=ip)
+        row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_IP, ip=ip)
         contact = None
         if row:
             contact = models.Contact(*row)

@@ -117,7 +117,7 @@ def add_contact(name, ip, key_file, key, auto):
         db.DB.add_contact_with_key(name, ip, contact_key)
         return
 
-    if (key_file is None) ^ (key is None):
+    if (key_file is None and key is None) or (key_file is not None and key is not None):
         print("Pass only (exactly) one of '--key-file' and '--key'")
         return
     if key:
@@ -127,6 +127,25 @@ def add_contact(name, ip, key_file, key, auto):
             f.read()
             contact_key = key
     db.DB.add_contact_with_key(name, ip, contact_key)
+
+
+@contact.command("show")
+@click.argument("name", type=str, default=None, required=False)
+@click.argument("ip", type=str, default=None, required=False)
+@click.option("--show-key", is_flag=True)
+def show_contact(name, ip, show_key):
+    if not name and not ip:
+        print("You need to provide ip or name")
+        return
+
+    if name:
+        contact = db.DB.fetch_contact_by_name(name)
+    else:
+        contact = db.DB.fetch_contact_by_ip(ip)
+
+    print("Name:", contact.name)
+    print("IP:", contact.ip)
+    print("Key:", contact.key if show_key else "***")
 
 
 @cli.group()
