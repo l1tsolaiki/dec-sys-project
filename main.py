@@ -37,6 +37,17 @@ def cli():
     pass
 
 
+@cli.group('id')
+def id_group():
+    """"Manipulate your ID"""
+
+
+@id_group.command('set')
+@click.argument('id')
+def set_id(id):
+    db.DB.insert_setting('peer_id', id)
+
+
 @cli.group('daemon')
 def daemon_group():
     """Control daemon"""
@@ -201,9 +212,11 @@ def send_message(name):
     text = input('Enter your message: ')
     transmitter = transport.Transmitter()
     msg = {
+        'id': uuid.uuid4().hex,
         'type': models.MessageType.MESSAGE.value,
         'body': text,
     }
+    db.DB.insert_message(msg['id'], db.get_peer_id(), text, received=False, seen=False, decrypted=True)
     success = transmitter.transmit(peer, msg)
     if not success:
         logging.warning('Could not transmit message to anybody')

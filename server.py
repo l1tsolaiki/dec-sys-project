@@ -43,30 +43,38 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def dispatch(self, data):
         msg_type = data['type']
         peer = db.DB.fetch_peer_by_id(data['from'])
+        my_peer_id = db.get_peer_id()
         if not peer:
             db.DB.add_peer_only_required(data['from'], data['from'])
             peer = db.DB.fetch_peer_by_id(data['from'])
+
+        if my_peer_id in data['chain']:
+            logging.info('Drop message, because I(%s) am in chain already', my_peer_id)
+            return
+        if my_peer_id != data['to']:
+            logging.info('Retransmitting message')
+            transmitter = transport.Transmitter()
+            transmitter.retransmit(data)
+            return
+
         if msg_type == models.MessageType.MESSAGE.value:
             self.handle_message(data, peer)
         elif msg_type == models.MessageType.ACK.value:
-            logging.info('HELLOOOO!')
+            self.handle_ack()
 
     def handle_message(self, data, peer):
         logging.info('Handling message..')
-        my_peer_id = db.get_peer_id()
-        if my_peer_id in data['chain']:
-            logging.info('Drop message, because I(%s) am in chain already')
-            return
+
+        self.save_message(data)
+        logging.info('Saved message')
+        msg = {'id': data['id'], 'type': models.MessageType.ACK.value}
 
         transmitter = transport.Transmitter()
+        transmitter.transmit(peer, msg)
+        return
 
-        if my_peer_id == data['to']:
-            self.save_message(data)
-            logging.info('Saved message')
-            msg = {'id': data['id'], 'type': models.MessageType.ACK.value}
-            transmitter.transmit(peer, msg)
-            return
-        transmitter.retransmit(data)
+    def handle_ack(self, data, peer):
+        db.DB.insert_message()
 
     def save_message(self, data):
         body = data['body']
@@ -83,7 +91,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         else:
             db.DB.add_peer_only_required(data['from'], data['from'])
 
-        db.DB.insert_message(data['id'], data['from'], body, decrypted)
+        db.DB.insert_message(data['id'], data['from'], body, received=True, seen=False, decrypted=decrypted)
 
 
 if __name__ == '__main__':

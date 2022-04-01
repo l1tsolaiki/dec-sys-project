@@ -31,11 +31,11 @@ class DB:
     _CREATE_MESSAGES_TABLE = (
         'CREATE TABLE messages'
         ' (id VARCHAR(40) PRIMARY KEY,'
-        ' sender VARCHAR (40) NOT NULL REFERENCES peers(peer_id) ON DELETE RESTRICT,'
+        ' sender VARCHAR (40) NOT NULL,'
         ' body TEXT NOT NULL,'
-        ' received BOOLEAN NOT NULL DEFAULT FALSE,'
-        ' seen BOOLEAN NOT NULL DEFAULT FALSE,'
-        ' decrypted BOOLEAN)'
+        ' received BOOLEAN NOT NULL,'
+        ' seen BOOLEAN NOT NULL,'
+        ' decrypted BOOLEAN NOT NULL)'
     )
 
     _CREATE_MESSAGES_INDEX = 'CREATE INDEX IF NOT EXISTS unread ON messages(seen ASC)'
@@ -88,12 +88,16 @@ class DB:
     '''Messages'''
 
     _INSERT_NEW_MESSAGE = (
-        'INSERT INTO messages (id, sender, body, decrypted)'
-        ' VALUES (:id, :sender, :body, :decrypted)'
+        'INSERT INTO messages (id, sender, body, received, seen, decrypted)'
+        ' VALUES (:id, :sender, :body, :received, :seen, :decrypted)'
     )
 
     _FETCH_UNREAD_MESSAGES = (
         'SELECT id, sender, body, decrypted FROM messages WHERE seen = false'
+    )
+
+    _UPDATE_MESSAGE_RECEIVED = (
+        'UPDATE messages SET received = true WHERE id = :id'
     )
 
     @staticmethod
@@ -188,18 +192,24 @@ class DB:
     """Messages"""
 
     @staticmethod
-    def insert_message(msg_id: str, sender: str, body: str, decrypted: bool):
+    def insert_message(msg_id: str, sender: str, body: str, received=False, seen=False, decrypted=False):
         return DB._execute(
             DB._INSERT_NEW_MESSAGE,
             id=msg_id,
             sender=sender,
             body=body,
+            received=received,
+            seen=seen,
             decrypted=decrypted,
         )
 
     @staticmethod
     def fetch_unread_messages():
         return DB._execute_fetchall(DB._FETCH_UNREAD_MESSAGES)
+
+    @staticmethod
+    def update_message_received(msg_id):
+        return DB._execute(DB._UPDATE_MESSAGE_RECEIVED, id=msg_id)
 
 
 def get_peer_id():
