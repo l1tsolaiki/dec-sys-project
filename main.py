@@ -35,13 +35,13 @@ def init():
 
 @click.group()
 def cli():
-    '''CLI app for messaging.'''
+    """CLI app for messaging."""
     pass
 
 
 @cli.group('daemon')
 def daemon_group():
-    '''Control daemon'''
+    """Control daemon"""
     pass
 
 
@@ -104,7 +104,7 @@ def daemon_down():
 
 @cli.group('peer')
 def peers_group():
-    '''Manage peers'''
+    """Manage peers"""
     pass
 
 
@@ -166,7 +166,7 @@ def show_peer(name, peer_id, show_key):
 
 @cli.group('message')
 def message():
-    '''Manage messaged'''
+    """Manage messaged"""
 
 
 @message.command('send')

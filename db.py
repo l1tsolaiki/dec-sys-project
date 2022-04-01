@@ -69,10 +69,12 @@ class DB:
         'INSERT INTO peers (peer_id, name) VALUES (:peer_id, :name)'
     )
 
-    _FETCH_PEER_BY_NAME = 'SELECT name, ip, key FROM peers WHERE name = :name'
-    _FETCH_PEER_BY_IP = 'SELECT name, ip, key FROM peers WHERE ip = :ip'
-    _FETCH_PEER_BY_ID = 'SELECT name, ip, key FROM peers WHERE peer_id = :peer_id'
-    _FETCH_ALL_PEERS = 'SELECT name, ip, key FROM peers'
+    _FETCH_PEER_BY_NAME = 'SELECT peer_id, name, ip, key FROM peers WHERE name = :name'
+    _FETCH_PEER_BY_IP = 'SELECT peer_id, name, ip, key FROM peers WHERE ip = :ip'
+    _FETCH_PEER_BY_ID = (
+        'SELECT peer_id, name, ip, key FROM peers WHERE peer_id = :peer_id'
+    )
+    _FETCH_ALL_PEERS = 'SELECT peer_id, name, ip, key FROM peers'
 
     '''Messages'''
 

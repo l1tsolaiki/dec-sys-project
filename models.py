@@ -16,7 +16,7 @@ class Peer:
     def to_tuple(self):
         if self.show:
             self.show = False
-            return self.name, self.ip, self.key
+            return self.peer_id, self.name, self.ip, self.key
         return self.peer_id, self.name, self.ip, '***'
 
     def show_key(self):

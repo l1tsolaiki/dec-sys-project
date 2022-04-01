@@ -39,8 +39,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         peer = db.DB.fetch_peer_by_id(data['from'])
         if not peer:
             db.DB.add_peer_only_required(data['from'], data['from'])
+            peer = db.DB.fetch_peer_by_id(data['from'])
         if msg_type == models.MessageType.MESSAGE.value:
             self.handle_message(data, peer)
+        elif msg_type == models.MessageType.ACK.value:
+            logging.info('HELLOOOO!')
 
     def handle_message(self, data, peer):
         logging.info('Handling message..')
@@ -55,7 +58,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             self.save_message(data)
             logging.info('Saved message')
             msg = {'id': data['id'], 'type': models.MessageType.ACK}
-            transmitter.transmit()
+            transmitter.transmit(peer, msg)
             return
         transmitter.retransmit(data)
 
