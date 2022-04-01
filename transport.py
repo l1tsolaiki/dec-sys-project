@@ -27,7 +27,7 @@ class Transport:
             data += received
 
         bytes_msg = self.encryptor.decrypt(data)
-        return Transport._load_from_bytes(data)
+        return Transport._load_from_bytes(bytes_msg)
 
     def connect(self):
         self.sck.connect((self.ip, int(consts.DAEMON_PORT)))
