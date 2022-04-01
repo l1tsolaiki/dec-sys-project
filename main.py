@@ -156,12 +156,35 @@ def show_peer(name, peer_id, show_key):
     else:
         all_peers = [db.DB.fetch_peer_by_id(peer_id)]
 
-    if not all_peers:
+    if not any(all_peers):
         logging.info('Could not find peers')
         return
     if show_key:
         all_peers = list(map(lambda x: x.show_key(), all_peers))
     display_peers(list(map(lambda x: x.to_tuple(), all_peers)))
+
+
+@peers_group.command('edit')
+@click.argument('name')
+@click.option('--new-id', type=str)
+@click.option('--new-name', type=str)
+@click.option('--new-ip', type=str)
+@click.option('--new-key', type=str)
+def edit_peer(name, new_id, new_name, new_ip, new_key):
+    peer = db.DB.fetch_peer_by_name(name)
+    if not peer:
+        print('No such peer')
+        return
+
+    if new_id:
+        peer.peer_id = new_id
+    if new_name:
+        peer.name = new_name
+    if new_ip:
+        peer.ip = new_ip
+    if new_key:
+        peer.key = new_key
+    db.DB.update_peer(name, peer.peer_id, peer.name, peer.ip, peer.key)
 
 
 @cli.group('message')

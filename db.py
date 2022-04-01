@@ -76,6 +76,15 @@ class DB:
     )
     _FETCH_ALL_PEERS = 'SELECT peer_id, name, ip, key FROM peers'
 
+    _UPDATE_PEER = (
+        'UPDATE peers SET'
+        ' peer_id = :new_id,'
+        ' name = :new_name,'
+        ' ip = :new_ip,'
+        ' key = :new_key'
+        ' WHERE name = :old_name'
+    )
+
     '''Messages'''
 
     _INSERT_NEW_MESSAGE = (
@@ -134,9 +143,7 @@ class DB:
 
     @staticmethod
     def add_peer_only_required(peer_id: str, name: str):
-        return DB._execute(
-            DB._INSERT_PEER_WITHOUT_KEY, peer_id=peer_id, name=name, ip=ip
-        )
+        return DB._execute(DB._INSERT_PEER_ONLY_REQUIRED, peer_id=peer_id, name=name)
 
     @staticmethod
     def fetch_peer_by_name(name: str):
@@ -167,7 +174,18 @@ class DB:
         rows = DB._execute_fetchall(DB._FETCH_ALL_PEERS)
         return [models.Peer(*row) for row in rows]
 
-    '''Messages'''
+    @staticmethod
+    def update_peer(old_name, new_id, new_name, new_ip, new_key):
+        return DB._execute(
+            DB._UPDATE_PEER,
+            old_name=old_name,
+            new_id=new_id,
+            new_name=new_name,
+            new_ip=new_ip,
+            new_key=new_key,
+        )
+
+    """Messages"""
 
     @staticmethod
     def insert_message(msg_id: str, sender: str, body: str, decrypted: bool):
