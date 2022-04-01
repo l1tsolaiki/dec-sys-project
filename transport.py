@@ -35,10 +35,14 @@ class Transport:
 
     @staticmethod
     def _dump_to_bytes(message: dict) -> bytes:
+        print('TYPE IN DUMP:', type(message))
+        print(message)
         return bytes(json.dumps(message), encoding="utf-8")
 
     @staticmethod
     def _load_from_bytes(message: bytes) -> dict:
+        print('TYPE IN DUMP:', type(message))
+        print(message)
         return json.loads(str(message, encoding="utf-8"))
 
     @staticmethod
