@@ -203,4 +203,4 @@ class DB:
 
 
 def get_peer_id():
-    return DB.fetch_setting('peer_id')
+    return DB.fetch_setting('peer_id')[0]

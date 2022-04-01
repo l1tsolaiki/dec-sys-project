@@ -224,8 +224,8 @@ def read_messages():
 if __name__ == '__main__':
     if init():
         print(
-            '\nNew ID was generated for you: {}\n'.format(db.DB.fetch_setting('peer_id')[0])
+            '\nNew ID was generated for you: {}\n'.format(db.get_peer_id())
         )
     else:
-        print('\nYour ID is {}\n'.format(db.DB.fetch_setting('peer_id')[0]))
+        print('\nYour ID is {}\n'.format(db.get_peer_id()))
     cli()
