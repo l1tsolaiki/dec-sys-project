@@ -63,7 +63,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         if my_peer_id == data['to']:
             self.save_message(data)
             logging.info('Saved message')
-            msg = {'id': data['id'], 'type': models.MessageType.ACK}
+            msg = {'id': data['id'], 'type': models.MessageType.ACK.value}
             transmitter.transmit(peer, msg)
             return
         transmitter.retransmit(data)
