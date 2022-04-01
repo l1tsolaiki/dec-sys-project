@@ -33,7 +33,7 @@ def daemon():
     pass
 
 
-@daemon.command('up')
+@daemon.command("up")
 def daemon_up():
     try:
         p = subprocess.Popen(
@@ -72,9 +72,9 @@ def daemon_up():
         )
 
 
-@daemon.command('down')
+@daemon.command("down")
 def daemon_down():
-    res = db.DB.delete_pid(daemon="daemon")
+    res = db.DB.fetch_pid(daemon="daemon")
 
     if res is None:
         print("Daemon is not running")
@@ -87,6 +87,7 @@ def daemon_down():
         print(f"Daemon shut down")
     except ProcessLookupError:
         print("Looks like daemon was not running")
+    db.DB.delete_pid(daemon="daemon")
 
 
 @cli.group()
@@ -95,7 +96,7 @@ def contact():
     pass
 
 
-@contact.command('add')
+@contact.command("add")
 @click.argument("name")
 @click.argument("ip")
 @click.option(
@@ -107,9 +108,7 @@ def contact():
 @click.option(
     "--key", type=str, default=None, help="Key for this contact (excludes --key-file)"
 )
-@click.option(
-    "--auto", is_flag=True, help="Automatically generate key"
-)
+@click.option("--auto", is_flag=True, help="Automatically generate key")
 def add_contact(name, ip, key_file, key, auto):
     if auto:
         contact_key = encryption.generate_key()
@@ -133,15 +132,15 @@ def messages():
     """Manage messaged"""
 
 
-@messages.command('send')
+@messages.command("send")
 @click.argument("name")
 def send_message(name):
     contact = db.DB.fetch_contact_by_name(name)
     if not contact:
-        print(f'Could not find contact \'{name}\'')
+        print(f"Could not find contact '{name}'")
         return
 
-    text = input('Enter your message: ')
+    text = input("Enter your message: ")
     print(contact, text)
 
 

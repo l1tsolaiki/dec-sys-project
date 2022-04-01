@@ -7,7 +7,6 @@ import models
 
 
 class Transport:
-
     def __init__(self, contact: models.Contact):
         self.sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.encryptor = encryption.Encryptor(contact.key)
@@ -19,7 +18,7 @@ class Transport:
         self.sck.sendall(bytes_msg)
 
     def _dump_to_bytes(self, message: dict):
-        return bytes(json.dumps(message), encoding='utf-8')
+        return bytes(json.dumps(message), encoding="utf-8")
 
     def _load_from_bytes(self, message: bytes):
-        return json.loads(str(message, encoding='utf-8'))
+        return json.loads(str(message, encoding="utf-8"))

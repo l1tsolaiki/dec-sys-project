@@ -16,7 +16,7 @@ def get_cursor():
 
 class DB:
     _CREATE_DAEMON_TABLE = (
-        "CREATE TABLE daemon" " (daemon VARCHAR(10) PRIMARY KEY," " pid INTEGER)"
+        "CREATE TABLE daemon (daemon VARCHAR(10) PRIMARY KEY, pid INTEGER)"
     )
 
     _CREATE_CONTACTS_TABLE = (
@@ -30,23 +30,20 @@ class DB:
 
     _INSERT_PID = (
         "INSERT INTO daemon(daemon, pid) VALUES (:daemon, :pid)"
-        " ON CONFLICT DO UPDATE SET"
+        " ON CONFLICT(daemon) DO UPDATE SET"
         " pid = :pid"
         " WHERE daemon = :daemon"
     )
 
-    _DELETE_PID = "DELETE FROM daemon WHERE" " daemon = :daemon" " RETURNING pid"
+    _DELETE_PID = "DELETE FROM daemon WHERE daemon"
 
-    _FIND_PID = "SELECT pid FROM DAEMON WHERE" " daemon = :daemon"
+    _FIND_PID = "SELECT pid FROM DAEMON WHERE daemon = :daemon"
 
     _INSERT_CONTACT_WITH_KEY = (
         "INSERT INTO contacts (name, ip, key) VALUES (:name, :ip, :key)"
     )
 
-    _FETCH_CONTACT_BY_NAME = (
-        'SELECT name, ip, key FROM contacts WHERE'
-        ' name = :name'
-    )
+    _FETCH_CONTACT_BY_NAME = "SELECT name, ip, key FROM contacts WHERE" " name = :name"
 
     @staticmethod
     def _execute(query, **kwargs):
@@ -71,6 +68,10 @@ class DB:
     @staticmethod
     def insert_pid(daemon, pid):
         return DB._execute(DB._INSERT_PID, daemon=daemon, pid=pid)
+
+    @staticmethod
+    def fetch_pid(daemon):
+        return DB._execute_fetchone(DB._DELETE_PID, daemon=daemon)
 
     @staticmethod
     def delete_pid(daemon):

@@ -2,7 +2,6 @@ import enum
 
 
 class Contact:
-
     def __init__(self, name, ip, key=None):
         self.name = name
         self.ip = ip
