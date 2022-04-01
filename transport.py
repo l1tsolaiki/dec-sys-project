@@ -60,9 +60,14 @@ class Sender:
         encrypted_body = encryption.Encryptor(self.contact.key).encrypt(bytes(body, encoding='utf-8'))
         my_contacts = db.DB.fetch_all_contacts()
 
+        success = 0
         for contact in my_contacts:
-            self.send(contact, encrypted_body)
-        print(f'Transmitted msg to {len(my_contacts)} contacts')
+            try:
+                self.send(contact, encrypted_body)
+                success += 1
+            except socket.timeout:
+                print(f'Cannot reach {contact.name} on {contact.ip}')
+        print(f'Transmitted msg to {success} contacts')
 
     def send(self, contact: models.Contact, body: bytes):
         transport = Transport(Transport.create_socket(), contact)

@@ -23,6 +23,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         # self.request is the TCP socket connected to the client
+        logging.info('Handle request')
         contact = db.DB.fetch_contact_by_ip(self.client_address[0])
         tcp = transport.Transport(self.request, contact)
         data = tcp.receive_all()

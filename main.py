@@ -168,13 +168,9 @@ def send_message(name):
         print(f"Could not find contact '{name}'")
         return
 
-    tcp = transport.Transport(transport.Transport.create_socket(), contact).connect()
     text = input("Enter your message: ")
-    print(contact, text)
-    try:
-        tcp.send({"msg": text})
-    except socket.timeout:
-        print(f"Could not reach {contact.name} on {contact.ip}")
+    sender = transport.Sender(contact)
+    sender.transmit(text)
 
 
 if __name__ == "__main__":
