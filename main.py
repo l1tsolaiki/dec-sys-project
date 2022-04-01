@@ -126,7 +126,7 @@ def add_contact(name, ip, key_file, key, auto):
         with open(key_file, "r") as f:
             f.read()
             contact_key = key
-    db.DB.add_contact_with_key(name, ip, contact_key)
+    db.DB.add_contact_with_key(name, ip, bytes(contact_key, encoding='utf-8'))
 
 
 @contact.command("show")
@@ -161,7 +161,7 @@ def send_message(name):
         print(f"Could not find contact '{name}'")
         return
 
-    tcp = transport.Transport(transport.Transport.create_socket(), contact)
+    tcp = transport.Transport(transport.Transport.create_socket(), contact).connect()
     text = input("Enter your message: ")
     print(contact, text)
     try:

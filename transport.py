@@ -14,7 +14,6 @@ class Transport:
 
     def send(self, message: dict):
         bytes_msg = Transport._dump_to_bytes(message)
-        self.sck.connect((self.ip, int(consts.DAEMON_PORT)))
         self.sck.sendall(bytes_msg)
 
     def receive_all(self):
@@ -26,6 +25,10 @@ class Transport:
             data += received
 
         return Transport._load_from_bytes(data)
+
+    def connect(self):
+        self.sck.connect((self.ip, int(consts.DAEMON_PORT)))
+        return self
 
     @staticmethod
     def _dump_to_bytes(message: dict):
