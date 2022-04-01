@@ -65,10 +65,10 @@ class DB:
     """Peers"""
 
     _INSERT_PEER_WITH_KEY = (
-        "INSERT INTO peers (id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
+        "INSERT INTO peers (peer_id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
     )
     _INSERT_PEER_WITHOUT = (
-        "INSERT INTO peers (id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
+        "INSERT INTO peers (peer_id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
     )
 
     _FETCH_PEER_BY_NAME = "SELECT name, ip, key FROM peers WHERE name = :name"
