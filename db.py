@@ -71,7 +71,7 @@ class DB:
 
     @staticmethod
     def fetch_pid(daemon):
-        return DB._execute_fetchone(DB._DELETE_PID, daemon=daemon)
+        return DB._execute_fetchone(DB._FIND_PID, daemon=daemon)
 
     @staticmethod
     def delete_pid(daemon):
