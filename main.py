@@ -1,24 +1,27 @@
 #!python3
-import socket
 
-import click
+import logging
 import os
 import signal
 import sqlite3
 import subprocess
 import sys
 
+import click
 import tabulate
 
 import db
 import consts
 import encryption
-import models
 import transport
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
+
+logging.basicConfig(
+    stream=sys.stdout, level=logging.DEBUG, format="%(levelname)s - %(message)s"
+)
 
 
 def init():
@@ -32,7 +35,7 @@ def cli():
     pass
 
 
-@cli.group('daemon')
+@cli.group("daemon")
 def daemon_group():
     """Control daemon"""
     pass
@@ -49,7 +52,7 @@ def daemon_up():
         )
         try:
             p.wait(timeout=1)
-            print(
+            logging.info(
                 f"Error! Subprocess exited with exit code {p.returncode}. "
                 f"Check that port is not in use.",
                 file=sys.stderr,
@@ -63,17 +66,18 @@ def daemon_up():
             db.DB.insert_pid("daemon", p.pid)
         except sqlite3.Error as exc:
             p.kill()
-            print(f"Error with DB:\n{str(exc)}")
+            logging.error(f"Error with DB: %s", str(exc))
             return
-        print(
-            f"Daemon started with pid={p.pid} on {consts.DAEMON_HOST}:{consts.DAEMON_PORT}"
+        logging.info(
+            f"Daemon started with pid=%s on %s:%s",
+            p.pid,
+            consts.DAEMON_HOST,
+            consts.DAEMON_PORT,
         )
     except PermissionError:
-        print(
-            f"Could not run daemon. Run:\n"
-            f'chmod +x {os.path.abspath("./server.py")}\n'
-            f"And try again",
-            file=sys.stderr,
+        logging.info(
+            f"Could not run daemon. Run:\n" f"chmod +x %s\n" f"And try again",
+            os.path.abspath("./server.py"),
         )
 
 
@@ -82,20 +86,20 @@ def daemon_down():
     res = db.DB.fetch_pid("daemon")
 
     if res is None:
-        print("Daemon is not running")
+        logging.info("Daemon is not running")
         return
 
     pid = res[0]
-    print(f"Shutting down daemon with pid={pid} ...")
+    logging.info(f"Shutting down daemon with pid={pid} ...")
     try:
         os.kill(pid, signal.SIGTERM)
-        print(f"Daemon shut down")
+        logging.info(f"Daemon shut down")
     except ProcessLookupError:
-        print("Looks like daemon was not running")
+        logging.info("Looks like daemon was not running")
     db.DB.delete_pid("daemon")
 
 
-@cli.group('contact')
+@cli.group("contact")
 def contacts_group():
     """Manage contacts"""
     pass
@@ -121,7 +125,7 @@ def add_contact(name, ip, key_file, key, auto):
         return
 
     if (key_file is None and key is None) or (key_file is not None and key is not None):
-        print("Pass only (exactly) one of '--key-file' and '--key'")
+        logging.info("Pass only (exactly) one of '--key-file' and '--key'")
         return
     if key:
         contact_key = key
@@ -129,7 +133,7 @@ def add_contact(name, ip, key_file, key, auto):
         with open(key_file, "r") as f:
             f.read()
             contact_key = key
-    db.DB.add_contact_with_key(name, ip, bytes(contact_key, encoding='utf-8'))
+    db.DB.add_contact_with_key(name, ip, bytes(contact_key, encoding="utf-8"))
 
 
 @contacts_group.command("show")
@@ -137,9 +141,8 @@ def add_contact(name, ip, key_file, key, auto):
 @click.argument("ip", type=str, default=None, required=False)
 @click.option("--show-key", is_flag=True)
 def show_contact(name, ip, show_key):
-
     def display_contacts(contacts: list):
-        print(tabulate.tabulate(contacts, headers=['Name', 'IP', 'Key']))
+        logging.info(tabulate.tabulate(contacts, headers=["Name", "IP", "Key"]))
 
     if not name and not ip:
         all_contacts = db.DB.fetch_all_contacts()
@@ -149,13 +152,13 @@ def show_contact(name, ip, show_key):
         all_contacts = [db.DB.fetch_contact_by_ip(ip)]
 
     if not all_contacts:
-        print('Could not find contacts')
+        logging.info("Could not find contacts")
     if show_key:
         all_contacts = list(map(lambda x: x.show_key(), all_contacts))
     display_contacts(list(map(lambda x: x.to_tuple(), all_contacts)))
 
 
-@cli.group('message')
+@cli.group("message")
 def message():
     """Manage messaged"""
 
@@ -165,7 +168,7 @@ def message():
 def send_message(name):
     contact = db.DB.fetch_contact_by_name(name)
     if not contact:
-        print(f"Could not find contact '{name}'")
+        logging.info(f"Could not find contact '{name}'")
         return
 
     text = input("Enter your message: ")

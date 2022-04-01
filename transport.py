@@ -1,5 +1,7 @@
 import json
+import logging
 import socket
+import uuid
 
 import consts
 import db
@@ -17,7 +19,6 @@ class Transport:
         bytes_msg = Transport._dump_to_bytes(message)
         encrypted = self.encryptor.encrypt(bytes_msg)
         self.sck.sendall(encrypted)
-        print(f'Sent {message}! (encrypted as {encrypted})')
 
     def receive_all(self):
         data = b""
@@ -57,7 +58,9 @@ class Sender:
         self.contact = contact
 
     def transmit(self, body: str):
-        encrypted_body = encryption.Encryptor(self.contact.key).encrypt(bytes(body, encoding='utf-8'))
+        encrypted_body = encryption.Encryptor(self.contact.key).encrypt(
+            bytes(body, encoding="utf-8")
+        )
         my_contacts = db.DB.fetch_all_contacts()
 
         success = 0
@@ -65,19 +68,23 @@ class Sender:
             try:
                 self.send(contact, encrypted_body)
                 success += 1
-            except socket.timeout:
-                print(f'Cannot reach {contact.name} on {contact.ip}')
-        print(f'Transmitted msg to {success} contacts')
+            except (socket.timeout, ConnectionRefusedError):
+                logging.info(f"Cannot reach {contact.name} on {contact.ip}")
+        logging.info(f"Transmitted msg to {success} contacts")
 
     def send(self, contact: models.Contact, body: bytes):
-        transport = Transport(Transport.create_socket(), contact)
+        transport = Transport(Transport.create_socket(), contact).connect()
         transport.send(self.prepare_dict(transport, body))
 
     def prepare_dict(self, transport: Transport, body: bytes):
         return {
-            'type': models.MessageType.MESSAGE.value,
-            'from': transport.get_my_ip(),
-            'to': self.contact.ip,
-            'body': str(body, encoding='utf-8'),
-            'chain': [transport.get_my_ip()]
+            "id": uuid.uuid4().hex,
+            "type": models.MessageType.MESSAGE.value,
+            "from": transport.get_my_ip(),
+            "to": self.contact.ip,
+            "body": str(body, encoding="utf-8"),
+            "chain": [transport.get_my_ip()],
         }
+
+    def update_dict(self, message_dict):
+        message_dict["chain"].append()

@@ -5,6 +5,7 @@ import socketserver
 import threading
 
 import db
+import encryption
 import models
 import transport
 
@@ -23,22 +24,39 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         # self.request is the TCP socket connected to the client
-        logging.info('Handle request')
+        logging.info("Handle request")
         contact = db.DB.fetch_contact_by_ip(self.client_address[0])
         tcp = transport.Transport(self.request, contact)
         data = tcp.receive_all()
-        logging.info('Received message from ip=%s, msg=%s', self.client_address[0], data)
+        logging.info(
+            "Received message from ip=%s, msg=%s", self.client_address[0], data
+        )
         self.dispatch(data)
         # just send back the same data, but upper-cased
         tcp.send(data)
 
     def dispatch(self, data):
-        msg_type = data['type']
+        msg_type = data["type"]
         if msg_type == models.MessageType.MESSAGE.value:
             self.handle_message(data)
 
     def handle_message(self, data):
-        logging.info('Handling message..')
+        logging.info("Handling message..")
+        my_ip = self.request.getsockname()[0]
+        if my_ip in data['chain']:
+            logging.info('Drop message, because I(%s) am in chain already')
+            return
+        if my_ip == data['to']:
+            self.save_message(data)
+            logging.info('Saved message')
+
+    def save_message(self, data):
+        body = data['body']
+
+        contact = db.DB.fetch_contact_by_ip(data['from'])
+        if contact:
+            decrypted = encryption.Encryptor(contact.key).decrypt(bytes(body, encoding='utf-8')).decode('utf-8')
+            logging.info('decrypted body: %s', decrypted)
 
 
 if __name__ == "__main__":
@@ -61,6 +79,7 @@ if __name__ == "__main__":
 
         server_thread = threading.Thread(target=server.serve_forever)
         signal.signal(signal.SIGTERM, signal_handler)
+        logging.info("Start server")
         server_thread.start()
 
         signal.pause()

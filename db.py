@@ -15,6 +15,9 @@ def get_cursor():
 
 
 class DB:
+
+    """Init"""
+
     _CREATE_DAEMON_TABLE = (
         "CREATE TABLE daemon (daemon VARCHAR(10) PRIMARY KEY, pid INTEGER)"
     )
@@ -27,14 +30,21 @@ class DB:
     )
 
     _CREATE_MESSAGES_TABLE = (
-        'CREATE TABLE messages'
-        ' (id VARCHAR(40) PRIMARY KEY,'
-        ' sender VARCHAR (15) NOT NULL REFERENCES contacts(ip) ON DELETE CASCADE ON UPDATE CASCADE,'
-        ' receiver VARCHAR (15) NOT NULL,'
-        ' body TEXT NOT NULL)'
+        "CREATE TABLE messages"
+        " (id VARCHAR(40) PRIMARY KEY,"
+        " sender VARCHAR (15) NOT NULL REFERENCES contacts(ip) ON DELETE CASCADE ON UPDATE CASCADE,"
+        " body TEXT NOT NULL,"
+        " read BOOLEAN NOT NULL DEFAULT FALSE,"
+        " decrypted BOOLEAN)"
     )
 
-    _INIT_QUERIES = [_CREATE_DAEMON_TABLE, _CREATE_CONTACTS_TABLE, _CREATE_MESSAGES_TABLE]
+    _INIT_QUERIES = [
+        _CREATE_DAEMON_TABLE,
+        _CREATE_CONTACTS_TABLE,
+        _CREATE_MESSAGES_TABLE,
+    ]
+
+    """Daemon"""
 
     _INSERT_PID = (
         "INSERT INTO daemon(daemon, pid) VALUES (:daemon, :pid)"
@@ -47,13 +57,18 @@ class DB:
 
     _FIND_PID = "SELECT pid FROM DAEMON WHERE daemon = :daemon"
 
+    """Contacts"""
+
     _INSERT_CONTACT_WITH_KEY = (
         "INSERT INTO contacts (name, ip, key) VALUES (:name, :ip, :key)"
     )
 
     _FETCH_CONTACT_BY_NAME = "SELECT name, ip, key FROM contacts WHERE name = :name"
     _FETCH_CONTACT_BY_IP = "SELECT name, ip, key FROM contacts WHERE ip = :ip"
-    _FETCH_ALL_CONTACTS = 'SELECT name, ip, key FROM contacts'
+    _FETCH_ALL_CONTACTS = "SELECT name, ip, key FROM contacts"
+
+    """Messages"""
+    _INSERT_NEW_MESSAGE = "INSERT INTO messages (id, sender, body, decrypted) VALUES (:id, :sender, :body, :decrypted)"
 
     @staticmethod
     def _execute(query, **kwargs):
@@ -121,5 +136,5 @@ class DB:
     """Messages"""
 
     @staticmethod
-    def insert_message():
-        pass
+    def insert_message(msg_id, sender, body, decrypted):
+        return DB._execute(DB._INSERT_NEW_MESSAGE, id=msg_id, sender=sender, body=body, decrypted=decrypted)
