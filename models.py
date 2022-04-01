@@ -1,8 +1,9 @@
 import enum
 
 
-class Contact:
-    def __init__(self, name, ip, key=None):
+class Peer:
+    def __init__(self, peer_id, name, ip, key=None):
+        self.peer_id = peer_id
         self.name = name
         self.ip = ip
         self.key = key
@@ -16,7 +17,7 @@ class Contact:
         if self.show:
             self.show = False
             return self.name, self.ip, self.key
-        return self.name, self.ip, "***"
+        return self.peer_id, self.name, self.ip, "***"
 
     def show_key(self):
         self.show = True

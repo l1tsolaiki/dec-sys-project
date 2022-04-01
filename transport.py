@@ -8,21 +8,12 @@ import db
 import encryption
 import models
 
-try:
-    _sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    _sck.settimeout(consts.SCK_TIMEOUT)
-    _sck.connect(("1.1.1.1", 80))
-    MY_IP = _sck.getsockname()[0]
-    _sck.close()
-except (socket.timeout, ConnectionRefusedError, OSError):
-    logging.warning("Connectivity error! Some functions may not be available.")
-
 
 class Transport:
-    def __init__(self, sck: socket.socket, contact: models.Contact):
+    def __init__(self, sck: socket.socket, peer: models.Peer):
         self.sck = sck
-        self.encryptor = encryption.Encryptor(contact.key)
-        self.ip = contact.ip
+        self.encryptor = encryption.Encryptor(peer.key)
+        self.ip = peer.ip
 
     def send(self, message: dict):
         bytes_msg = Transport._dump_to_bytes(message)
@@ -60,42 +51,46 @@ class Transport:
 
 
 class Transmitter:
-    def transmit(self, target: models.Contact, body: str):
-        encrypted_body = encryption.Encryptor(target.key).encrypt(
-            bytes(body, encoding="utf-8")
-        )
+    def transmit(self, target: models.Peer, msg: dict):
+        init = self.default_msg_dict(target)
+        init.update(msg)
+        msg = init
 
-        return self.send_to_every_contact(self.init_msg_dict(encrypted_body, target))
+        if msg.get('body'):
+            msg['body'] = encryption.Encryptor(target.key).encrypt(
+                msg['body'].encode('utf-8')
+            ).decode('utf-8')
+
+        return self.send_to_every_peer(msg)
 
     def retransmit(self, msg):
-        return self.send_to_every_contact(self.update_chain(msg))
+        return self.send_to_every_peer(self.update_chain(msg))
 
-    def send_to_every_contact(self, msg: dict):
-        my_contacts = db.DB.fetch_all_contacts()
+    def send_to_every_peer(self, msg: dict):
+        my_peers = db.DB.fetch_all_peers()
         success = 0
-        for contact in my_contacts:
+        for peer in my_peers:
             try:
-                self.send(contact, msg)
+                self.send(peer, msg)
                 success += 1
             except (socket.timeout, ConnectionRefusedError):
-                logging.info(f"Cannot reach {contact.name} on {contact.ip}")
-        logging.info(f"Transmitted msg to {success} contacts")
+                logging.info(f"Cannot reach {peer.name} on {peer.ip}")
         return success
 
-    def send(self, contact: models.Contact, msg: dict):
-        transport = Transport(Transport.create_socket(), contact).connect()
+    def send(self, peer: models.Peer, msg: dict):
+        transport = Transport(Transport.create_socket(), peer).connect()
         transport.send(msg)
 
-    def init_msg_dict(self, body: bytes, target: models.Contact):
+    def default_msg_dict(self, target: models.Peer):
+        my_peer_id = db.get_peer_id()
         return {
             "id": uuid.uuid4().hex,
-            "type": models.MessageType.MESSAGE.value,
-            "from": MY_IP,
-            "to": target.ip,
-            "body": str(body, encoding="utf-8"),
-            "chain": [MY_IP],
+            "from": my_peer_id,
+            "to": target.peer_id,
+            "chain": [my_peer_id],
         }
 
     def update_chain(self, message_dict: dict):
-        message_dict["chain"].append(MY_IP)
+        my_peer_id = db.get_peer_id()
+        message_dict["chain"].append(my_peer_id)
         return message_dict

@@ -19,12 +19,13 @@ class DB:
     """Init"""
 
     _CREATE_DAEMON_TABLE = (
-        "CREATE TABLE daemon (daemon VARCHAR(10) PRIMARY KEY, pid INTEGER)"
+        "CREATE TABLE settings (settings_key VARCHAR(50) PRIMARY KEY, settings_value VARCHAR(50))"
     )
 
-    _CREATE_CONTACTS_TABLE = (
-        "CREATE TABLE contacts"
-        " (ip VARCHAR(15) PRIMARY KEY,"
+    _CREATE_PEERS_TABLE = (
+        "CREATE TABLE peers"
+        " (peer_id VARCHAR(40) PRIMARY KEY,"
+        " ip VARCHAR(15) NOT NULL,"
         " name VARCHAR(40) NOT NULL UNIQUE,"
         " key TEXT NOT NULL)"
     )
@@ -32,44 +33,53 @@ class DB:
     _CREATE_MESSAGES_TABLE = (
         "CREATE TABLE messages"
         " (id VARCHAR(40) PRIMARY KEY,"
-        " sender VARCHAR (15) NOT NULL REFERENCES contacts(ip) ON DELETE CASCADE ON UPDATE CASCADE,"
+        " sender VARCHAR (40) NOT NULL REFERENCES peers(peer_id) ON DELETE RESTRICT,"
         " body TEXT NOT NULL,"
         " received BOOLEAN NOT NULL DEFAULT FALSE,"
         " seen BOOLEAN NOT NULL DEFAULT FALSE,"
         " decrypted BOOLEAN)"
     )
 
+    _CREATE_MESSAGES_INDEX = "CREATE INDEX IF NOT EXISTS unread ON messages(seen ASC)"
+
     _INIT_QUERIES = [
         _CREATE_DAEMON_TABLE,
-        _CREATE_CONTACTS_TABLE,
+        _CREATE_PEERS_TABLE,
         _CREATE_MESSAGES_TABLE,
+        _CREATE_MESSAGES_INDEX,
     ]
 
-    """Daemon"""
+    """Settings"""
 
-    _INSERT_PID = (
-        "INSERT INTO daemon(daemon, pid) VALUES (:daemon, :pid)"
-        " ON CONFLICT(daemon) DO UPDATE SET"
-        " pid = :pid"
-        " WHERE daemon = :daemon"
+    _INSERT_SETTING = (
+        "INSERT INTO settings(settings_key, settings_value) VALUES (:settings_key, :settings_value)"
+        " ON CONFLICT(settings_key) DO UPDATE SET"
+        " settings_value = :settings_value"
+        " WHERE settings_key = :settings_key"
     )
 
-    _DELETE_PID = "DELETE FROM daemon WHERE daemon"
+    _DELETE_SETTING = "DELETE FROM settings WHERE settings_key = :settings_key"
 
-    _FIND_PID = "SELECT pid FROM DAEMON WHERE daemon = :daemon"
+    _FIND_PID = "SELECT settings_value FROM settings WHERE settings_key = :settings_key"
 
-    """Contacts"""
+    """Peers"""
 
-    _INSERT_CONTACT_WITH_KEY = (
-        "INSERT INTO contacts (name, ip, key) VALUES (:name, :ip, :key)"
+    _INSERT_PEER_WITH_KEY = (
+        "INSERT INTO peers (id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
+    )
+    _INSERT_PEER_WITHOUT = (
+        "INSERT INTO peers (id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)"
     )
 
-    _FETCH_CONTACT_BY_NAME = "SELECT name, ip, key FROM contacts WHERE name = :name"
-    _FETCH_CONTACT_BY_IP = "SELECT name, ip, key FROM contacts WHERE ip = :ip"
-    _FETCH_ALL_CONTACTS = "SELECT name, ip, key FROM contacts"
+    _FETCH_PEER_BY_NAME = "SELECT name, ip, key FROM peers WHERE name = :name"
+    _FETCH_PEER_BY_IP = "SELECT name, ip, key FROM peers WHERE ip = :ip"
+    _FETCH_ALL_PEERS = "SELECT name, ip, key FROM peers"
 
     """Messages"""
-    _INSERT_NEW_MESSAGE = "INSERT INTO messages (id, sender, body, decrypted) VALUES (:id, :sender, :body, :decrypted)"
+    _INSERT_NEW_MESSAGE = (
+        "INSERT INTO messages (id, sender, body, decrypted)"
+        " VALUES (:id, :sender, :body, :decrypted)"
+    )
 
     @staticmethod
     def _execute(query, **kwargs):
@@ -90,49 +100,50 @@ class DB:
 
     @staticmethod
     def initialize():
-        for query in DB._INIT_QUERIES:
-            DB._execute(query)
+        with get_cursor() as cursor:
+            for query in DB._INIT_QUERIES:
+                cursor.execute(query)
 
     """Daemon"""
 
     @staticmethod
-    def insert_pid(daemon: str, pid):
-        return DB._execute(DB._INSERT_PID, daemon=daemon, pid=pid)
+    def insert_setting(key: str, value: str):
+        return DB._execute(DB._INSERT_SETTING, settings_key=key, settings_value=value)
 
     @staticmethod
-    def fetch_pid(daemon):
-        return DB._execute_fetchone(DB._FIND_PID, daemon=daemon)
+    def fetch_setting(key):
+        return DB._execute_fetchone(DB._FIND_PID, settings_key=key)
 
     @staticmethod
-    def delete_pid(daemon):
-        return DB._execute_fetchone(DB._DELETE_PID, daemon=daemon)
+    def delete_setting(key):
+        return DB._execute_fetchone(DB._DELETE_SETTING, settings_key=key)
 
-    """Contacts"""
-
-    @staticmethod
-    def add_contact_with_key(name: str, ip: str, key: str):
-        return DB._execute(DB._INSERT_CONTACT_WITH_KEY, name=name, ip=ip, key=key)
+    """Peers"""
 
     @staticmethod
-    def fetch_contact_by_name(name: str):
-        row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_NAME, name=name)
-        contact = None
+    def add_peer_with_key(peer_id: str, name: str, ip: str, key: str):
+        return DB._execute(DB._INSERT_PEER_WITH_KEY, peer_id=peer_id, name=name, ip=ip, key=key)
+
+    @staticmethod
+    def fetch_peer_by_name(name: str):
+        row = DB._execute_fetchone(DB._FETCH_PEER_BY_NAME, name=name)
+        peer = None
         if row:
-            contact = models.Contact(*row)
-        return contact
+            peer = models.Peer(*row)
+        return peer
 
     @staticmethod
-    def fetch_contact_by_ip(ip: str):
-        row = DB._execute_fetchone(DB._FETCH_CONTACT_BY_IP, ip=ip)
-        contact = None
+    def fetch_peer_by_ip(ip: str):
+        row = DB._execute_fetchone(DB._FETCH_PEER_BY_IP, ip=ip)
+        peer = None
         if row:
-            contact = models.Contact(*row)
-        return contact
+            peer = models.Peer(*row)
+        return peer
 
     @staticmethod
-    def fetch_all_contacts():
-        rows = DB._execute_fetchall(DB._FETCH_ALL_CONTACTS)
-        return [models.Contact(*row) for row in rows]
+    def fetch_all_peers():
+        rows = DB._execute_fetchall(DB._FETCH_ALL_PEERS)
+        return [models.Peer(*row) for row in rows]
 
     """Messages"""
 
@@ -145,3 +156,7 @@ class DB:
             body=body,
             decrypted=decrypted,
         )
+
+
+def get_peer_id():
+    return DB.fetch_setting('peer_id')

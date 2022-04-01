@@ -26,8 +26,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         # self.request is the TCP socket connected to the client
         logging.info("Handle request")
-        contact = db.DB.fetch_contact_by_ip(self.client_address[0])
-        tcp = transport.Transport(self.request, contact)
+        peer = db.DB.fetch_peer_by_ip(self.client_address[0])
+        tcp = transport.Transport(self.request, peer)
         data = tcp.receive_all()
         logging.info(
             "Received message from ip=%s, msg=%s", self.client_address[0], data
@@ -43,11 +43,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle_message(self, data):
         logging.info("Handling message..")
-        my_ip = self.request.getsockname()[0]
-        if my_ip in data["chain"]:
+        my_peer_id = db.get_peer_id()
+        if my_peer_id in data["chain"]:
             logging.info("Drop message, because I(%s) am in chain already")
             return
-        if my_ip == data["to"]:
+        if my_peer_id == data["to"]:
             self.save_message(data)
             logging.info("Saved message")
             return
@@ -57,14 +57,16 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         body = data["body"]
         decrypted = False
 
-        contact = db.DB.fetch_contact_by_ip(data["from"])
-        if contact:
+        peer = db.DB.fetch_peer_by_ip(data["from"])
+        if peer:
             body = (
-                encryption.Encryptor(contact.key)
+                encryption.Encryptor(peer.key)
                 .decrypt(bytes(body, encoding="utf-8"))
                 .decode("utf-8")
             )
             decrypted = True
+        else:
+
 
         db.DB.insert_message(data["id"], data["from"], body, decrypted)
 

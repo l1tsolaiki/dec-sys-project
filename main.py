@@ -9,6 +9,7 @@ import signal
 import sqlite3
 import subprocess
 import sys
+import uuid
 
 import click
 import tabulate
@@ -26,6 +27,9 @@ os.chdir(dname)
 def init():
     if not os.path.exists(consts.DB_NAME):
         db.DB.initialize()
+        db.DB.insert_setting('peer_id', uuid.uuid4().hex)
+        return True
+    return False
 
 
 @click.group()
@@ -54,7 +58,6 @@ def daemon_up():
             logging.info(
                 f"Error! Subprocess exited with exit code {p.returncode}. "
                 f"Check that port is not in use.",
-                file=sys.stderr,
             )
             return
         except subprocess.TimeoutExpired:
@@ -62,7 +65,7 @@ def daemon_up():
             pass
 
         try:
-            db.DB.insert_pid("daemon", p.pid)
+            db.DB.insert_setting("daemon", p.pid)
         except sqlite3.Error as exc:
             p.kill()
             logging.error(f"Error with DB: %s", str(exc))
@@ -82,7 +85,7 @@ def daemon_up():
 
 @daemon_group.command("down")
 def daemon_down():
-    res = db.DB.fetch_pid("daemon")
+    res = db.DB.fetch_setting("daemon")
 
     if res is None:
         logging.info("Daemon is not running")
@@ -91,69 +94,71 @@ def daemon_down():
     pid = res[0]
     logging.info(f"Shutting down daemon with pid={pid} ...")
     try:
-        os.kill(pid, signal.SIGTERM)
+        os.kill(int(pid), signal.SIGTERM)
         logging.info(f"Daemon shut down")
     except ProcessLookupError:
         logging.info("Looks like daemon was not running")
-    db.DB.delete_pid("daemon")
+    db.DB.delete_setting("daemon")
 
 
-@cli.group("contact")
-def contacts_group():
-    """Manage contacts"""
+@cli.group("peer")
+def peers_group():
+    """Manage peers"""
     pass
 
 
-@contacts_group.command("add")
+@peers_group.command("add")
+@click.argument("peer_id")
 @click.argument("name")
 @click.argument("ip")
 @click.option(
     "--key-file",
     type=str,
     default=None,
-    help="Path to file with key for this contact (excludes --key option)",
+    help="Path to file with key for this peer (excludes --key option)",
 )
 @click.option(
-    "--key", type=str, default=None, help="Key for this contact (excludes --key-file)"
+    "--key", type=str, default=None, help="Key for this peer (excludes --key-file)"
 )
 @click.option("--auto", is_flag=True, help="Automatically generate key")
-def add_contact(name, ip, key_file, key, auto):
+def add_peer(peer_id, name, ip, key_file, key, auto):
     if auto:
-        contact_key = encryption.generate_key()
-        db.DB.add_contact_with_key(name, ip, contact_key)
+        peer_key = encryption.generate_key()
+        db.DB.add_peer_with_key(peer_id, name, ip, peer_key)
         return
 
     if (key_file is None and key is None) or (key_file is not None and key is not None):
         logging.info("Pass only (exactly) one of '--key-file' and '--key'")
         return
     if key:
-        contact_key = key
+        peer_key = key
     if key_file:
         with open(key_file, "r") as f:
-            contact_key = f.read().strip()
-    db.DB.add_contact_with_key(name, ip, str(contact_key, encoding="utf-8"))
+            peer_key = f.read().strip()
+    db.DB.add_peer_with_key(peer_id, name, ip, peer_key)
 
 
-@contacts_group.command("show")
+@peers_group.command("show")
 @click.argument("name", type=str, default=None, required=False)
-@click.argument("ip", type=str, default=None, required=False)
+@click.argument("peer_id", type=str, default=None, required=False)
 @click.option("--show-key", is_flag=True)
-def show_contact(name, ip, show_key):
-    def display_contacts(contacts: list):
-        print(tabulate.tabulate(contacts, headers=["Name", "IP", "Key"]))
+def show_peer(name, peer_id, show_key):
+    def display_peers(peers: list):
+        print(tabulate.tabulate(peers, headers=["Peer ID", "Name", "IP", "Key"]))
 
-    if not name and not ip:
-        all_contacts = db.DB.fetch_all_contacts()
+    if not name and not peer_id:
+        all_peers = db.DB.fetch_all_peers()
     elif name:
-        all_contacts = [db.DB.fetch_contact_by_name(name)]
+        all_peers = [db.DB.fetch_peer_by_name(name)]
     else:
-        all_contacts = [db.DB.fetch_contact_by_ip(ip)]
+        all_peers = [db.DB.fetch_peer_by_ip(peer_id)]
 
-    if not all_contacts:
-        logging.info("Could not find contacts")
+    if not all_peers:
+        logging.info("Could not find peers")
+        return
     if show_key:
-        all_contacts = list(map(lambda x: x.show_key(), all_contacts))
-    display_contacts(list(map(lambda x: x.to_tuple(), all_contacts)))
+        all_peers = list(map(lambda x: x.show_key(), all_peers))
+    display_peers(list(map(lambda x: x.to_tuple(), all_peers)))
 
 
 @cli.group("message")
@@ -164,18 +169,27 @@ def message():
 @message.command("send")
 @click.argument("name")
 def send_message(name):
-    contact = db.DB.fetch_contact_by_name(name)
-    if not contact:
-        logging.info(f"Could not find contact '{name}'")
+    peer = db.DB.fetch_peer_by_name(name)
+    if not peer:
+        logging.info("Could not find peer '%s'", name)
         return
 
     text = input("Enter your message: ")
     transmitter = transport.Transmitter()
-    transmitter.transmit(text)
+    msg = {
+        'id': uuid.uuid4().hex,
 
-
+    }
+    success = transmitter.transmit(peer, text)
+    if not success:
+        logging.warning("Could not transmit message to anybody")
+        return
+    logging.info("Transmitted msg to %s peers", success)
 
 
 if __name__ == "__main__":
-    init()
+    if init():
+        print(f"New ID was generated for you: {db.DB.fetch_setting('peer_id')[0]}")
+    else:
+        print(f"Your ID is {db.DB.fetch_setting('peer_id')[0]}")
     cli()
