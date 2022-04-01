@@ -1,5 +1,3 @@
-#!python3
-
 # must import it first
 import log
 
@@ -226,8 +224,8 @@ def read_messages():
 if __name__ == '__main__':
     if init():
         print(
-            'New ID was generated for you: {}'.format(db.DB.fetch_setting('peer_id')[0])
+            '\nNew ID was generated for you: {}\n'.format(db.DB.fetch_setting('peer_id')[0])
         )
     else:
-        print('Your ID is {}'.format(db.DB.fetch_setting('peer_id')[0]))
+        print('\nYour ID is {}\n'.format(db.DB.fetch_setting('peer_id')[0]))
     cli()

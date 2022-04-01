@@ -27,12 +27,18 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         # self.request is the TCP socket connected to the client
         logging.info('Handle request')
         peer = db.DB.fetch_peer_by_ip(self.client_address[0])
+        if not peer:
+            logging.error('Cannot handle request: do not have peer with ip=%s', self.client_address[0])
+            return
         tcp = transport.Transport(self.request, peer)
         data = tcp.receive_all()
         logging.info(
             'Received message from ip=%s, msg=%s', self.client_address[0], data
         )
-        self.dispatch(data)
+        try:
+            self.dispatch(data)
+        except Exception as exc:  # noqa
+            logging.error(str(exc))
 
     def dispatch(self, data):
         msg_type = data['type']
