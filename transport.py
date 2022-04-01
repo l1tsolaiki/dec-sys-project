@@ -14,7 +14,9 @@ class Transport:
 
     def send(self, message: dict):
         bytes_msg = Transport._dump_to_bytes(message)
-        self.sck.sendall(bytes_msg)
+        encrypted = self.encryptor.encrypt(bytes_msg)
+        self.sck.sendall(encrypted)
+        print(f'Sent {encrypted}!')
 
     def receive_all(self):
         data = b""
@@ -24,6 +26,7 @@ class Transport:
                 break
             data += received
 
+        bytes_msg = self.encryptor.decrypt(data)
         return Transport._load_from_bytes(data)
 
     def connect(self):
@@ -31,11 +34,11 @@ class Transport:
         return self
 
     @staticmethod
-    def _dump_to_bytes(message: dict):
+    def _dump_to_bytes(message: dict) -> bytes:
         return bytes(json.dumps(message), encoding="utf-8")
 
     @staticmethod
-    def _load_from_bytes(message: bytes):
+    def _load_from_bytes(message: bytes) -> dict:
         return json.loads(str(message, encoding="utf-8"))
 
     @staticmethod
