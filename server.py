@@ -5,6 +5,7 @@ import socketserver
 import threading
 
 import db
+import models
 import transport
 
 
@@ -25,10 +26,18 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         contact = db.DB.fetch_contact_by_ip(self.client_address[0])
         tcp = transport.Transport(self.request, contact)
         data = tcp.receive_all()
-        logging.info("{} wrote:".format(self.client_address[0]))
-        logging.info(data)
+        logging.info('Received message from ip=%s, msg=%s', self.client_address[0], data)
+        self.dispatch(data)
         # just send back the same data, but upper-cased
         tcp.send(data)
+
+    def dispatch(self, data):
+        msg_type = data['type']
+        if msg_type == models.MessageType.MESSAGE.value:
+            self.handle_message(data)
+
+    def handle_message(self, data):
+        logging.info('Handling message..')
 
 
 if __name__ == "__main__":
@@ -45,7 +54,6 @@ if __name__ == "__main__":
         def signal_handler(sig, frame):
             logging.info(
                 "Server gracefully shutting down; thread_id=%s",
-                threading.get_native_id(),
             )
             server.shutdown()
             logging.info("Server shut down")

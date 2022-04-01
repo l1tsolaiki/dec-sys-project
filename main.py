@@ -8,9 +8,12 @@ import sqlite3
 import subprocess
 import sys
 
+import tabulate
+
 import db
 import consts
 import encryption
+import models
 import transport
 
 abspath = os.path.abspath(__file__)
@@ -29,13 +32,13 @@ def cli():
     pass
 
 
-@cli.group()
-def daemon():
+@cli.group('daemon')
+def daemon_group():
     """Control daemon"""
     pass
 
 
-@daemon.command("up")
+@daemon_group.command("up")
 def daemon_up():
     try:
         p = subprocess.Popen(
@@ -74,7 +77,7 @@ def daemon_up():
         )
 
 
-@daemon.command("down")
+@daemon_group.command("down")
 def daemon_down():
     res = db.DB.fetch_pid("daemon")
 
@@ -92,13 +95,13 @@ def daemon_down():
     db.DB.delete_pid("daemon")
 
 
-@cli.group()
-def contact():
+@cli.group('contact')
+def contacts_group():
     """Manage contacts"""
     pass
 
 
-@contact.command("add")
+@contacts_group.command("add")
 @click.argument("name")
 @click.argument("ip")
 @click.option(
@@ -129,26 +132,30 @@ def add_contact(name, ip, key_file, key, auto):
     db.DB.add_contact_with_key(name, ip, bytes(contact_key, encoding='utf-8'))
 
 
-@contact.command("show")
+@contacts_group.command("show")
 @click.argument("name", type=str, default=None, required=False)
 @click.argument("ip", type=str, default=None, required=False)
 @click.option("--show-key", is_flag=True)
 def show_contact(name, ip, show_key):
+
+    def display_contacts(contacts: list):
+        print(tabulate.tabulate(contacts, headers=['Name', 'IP', 'Key']))
+
     if not name and not ip:
-        print("You need to provide ip or name")
-        return
-
-    if name:
-        contact = db.DB.fetch_contact_by_name(name)
+        all_contacts = db.DB.fetch_all_contacts()
+    elif name:
+        all_contacts = [db.DB.fetch_contact_by_name(name)]
     else:
-        contact = db.DB.fetch_contact_by_ip(ip)
+        all_contacts = [db.DB.fetch_contact_by_ip(ip)]
 
-    print("Name:", contact.name)
-    print("IP:", contact.ip)
-    print("Key:", contact.key if show_key else "***")
+    if not all_contacts:
+        print('Could not find contacts')
+    if show_key:
+        all_contacts = list(map(lambda x: x.show_key(), all_contacts))
+    display_contacts(list(map(lambda x: x.to_tuple(), all_contacts)))
 
 
-@cli.group()
+@cli.group('message')
 def message():
     """Manage messaged"""
 

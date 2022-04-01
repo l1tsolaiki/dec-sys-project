@@ -21,12 +21,20 @@ class DB:
 
     _CREATE_CONTACTS_TABLE = (
         "CREATE TABLE contacts"
-        " (name VARCHAR(40) PRIMARY KEY,"
-        " ip VARCHAR(15) NOT NULL UNIQUE,"
-        " key TEXT)"
+        " (ip VARCHAR(15) PRIMARY KEY,"
+        " name VARCHAR(40) NOT NULL UNIQUE,"
+        " key TEXT NOT NULL)"
     )
 
-    _INIT_QUERIES = [_CREATE_DAEMON_TABLE, _CREATE_CONTACTS_TABLE]
+    _CREATE_MESSAGES_TABLE = (
+        'CREATE TABLE messages'
+        ' (id VARCHAR(40) PRIMARY KEY,'
+        ' sender VARCHAR (15) NOT NULL REFERENCES contacts(ip) ON DELETE CASCADE ON UPDATE CASCADE,'
+        ' receiver VARCHAR (15) NOT NULL,'
+        ' body TEXT NOT NULL)'
+    )
+
+    _INIT_QUERIES = [_CREATE_DAEMON_TABLE, _CREATE_CONTACTS_TABLE, _CREATE_MESSAGES_TABLE]
 
     _INSERT_PID = (
         "INSERT INTO daemon(daemon, pid) VALUES (:daemon, :pid)"
@@ -45,6 +53,7 @@ class DB:
 
     _FETCH_CONTACT_BY_NAME = "SELECT name, ip, key FROM contacts WHERE name = :name"
     _FETCH_CONTACT_BY_IP = "SELECT name, ip, key FROM contacts WHERE ip = :ip"
+    _FETCH_ALL_CONTACTS = 'SELECT name, ip, key FROM contacts'
 
     @staticmethod
     def _execute(query, **kwargs):
@@ -61,10 +70,14 @@ class DB:
         with get_cursor() as cursor:
             return cursor.execute(query, kwargs).fetchone()
 
+    """Init"""
+
     @staticmethod
     def initialize():
         for query in DB._INIT_QUERIES:
             DB._execute(query)
+
+    """Daemon"""
 
     @staticmethod
     def insert_pid(daemon, pid):
@@ -77,6 +90,8 @@ class DB:
     @staticmethod
     def delete_pid(daemon):
         return DB._execute_fetchone(DB._DELETE_PID, daemon=daemon)
+
+    """Contacts"""
 
     @staticmethod
     def add_contact_with_key(name, ip, key):
@@ -97,3 +112,14 @@ class DB:
         if row:
             contact = models.Contact(*row)
         return contact
+
+    @staticmethod
+    def fetch_all_contacts():
+        rows = DB._execute_fetchall(DB._FETCH_ALL_CONTACTS)
+        return [models.Contact(*row) for row in rows]
+
+    """Messages"""
+
+    @staticmethod
+    def insert_message():
+        pass
