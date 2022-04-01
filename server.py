@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import signal
 import socketserver
 import threading
@@ -79,7 +80,7 @@ if __name__ == "__main__":
 
         server_thread = threading.Thread(target=server.serve_forever)
         signal.signal(signal.SIGTERM, signal_handler)
-        logging.info("Start server")
+        logging.info("Start server, pid=%s", os.getpid())
         server_thread.start()
 
         signal.pause()
