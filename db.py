@@ -126,7 +126,6 @@ class DB:
     _FETCH_ALL_MESSAGES = (
         'SELECT id,'
         ' msg_id,'
-        ' created_at,'
         ' sender,'
         ' body,'
         ' created_at,'
