@@ -4,6 +4,7 @@ import os
 import signal
 import socketserver
 import threading
+import traceback
 
 import db
 import encryption
@@ -41,7 +42,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         try:
             self.dispatch(data)
         except Exception as exc:  # noqa
-            logging.error(str(exc))
+            logging.error(traceback.format_exc())
 
     def dispatch(self, data):
         msg_type = data['type']
