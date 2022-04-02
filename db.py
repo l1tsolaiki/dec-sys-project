@@ -266,7 +266,8 @@ def get_peer_id():
 
 
 def get_msg_cursor():
-    return DB.fetch_setting('cursor')[0]
+    cursor = DB.fetch_setting('cursor')
+    return cursor[0] if cursor else None
 
 
 def update_msg_cursor(cursor):
