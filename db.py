@@ -18,10 +18,14 @@ class DB:
 
     '''Init'''
 
-    _CREATE_DAEMON_TABLE = 'CREATE TABLE settings (settings_key VARCHAR(50) PRIMARY KEY, settings_value VARCHAR(50))'
+    _CREATE_SETTINGS_TABLE = (
+        'CREATE TABLE IF NOT EXISTS settings '
+        '(settings_key VARCHAR(50) PRIMARY KEY,'
+        'settings_value VARCHAR(50))'
+    )
 
     _CREATE_PEERS_TABLE = (
-        'CREATE TABLE peers'
+        'CREATE TABLE IF NOT EXISTS peers'
         ' (peer_id VARCHAR(40) PRIMARY KEY,'
         ' ip VARCHAR(15),'
         ' name VARCHAR(40) NOT NULL UNIQUE,'
@@ -29,8 +33,9 @@ class DB:
     )
 
     _CREATE_MESSAGES_TABLE = (
-        'CREATE TABLE messages'
-        ' (id VARCHAR(40) PRIMARY KEY,'
+        'CREATE TABLE IF NOT EXISTS messages'
+        ' (id INTEGER PRIMARY KEY AUTOINCREMENT,'
+        ' msg_id VARCHAR(40) NOT NULL,'
         ' sender VARCHAR (40) NOT NULL,'
         ' body TEXT NOT NULL,'
         ' received BOOLEAN NOT NULL,'
@@ -38,16 +43,26 @@ class DB:
         ' decrypted BOOLEAN NOT NULL)'
     )
 
-    _CREATE_MESSAGES_INDEX = 'CREATE INDEX IF NOT EXISTS unread ON messages(seen ASC)'
+    _CREATE_MESSAGES_INDEX = 'CREATE INDEX IF NOT EXISTS unread ON messages(msg_id)'
 
     _INIT_QUERIES = [
-        _CREATE_DAEMON_TABLE,
+        _CREATE_SETTINGS_TABLE,
         _CREATE_PEERS_TABLE,
         _CREATE_MESSAGES_TABLE,
         _CREATE_MESSAGES_INDEX,
     ]
 
-    '''Settings'''
+    """Purge"""
+
+    _DROP_PEERS_TABLE = 'DROP TABLE IF EXISTS peers'
+    _DROP_TABLE_MESSAGES = 'DROP TABLE IF EXISTS MESSAGES'
+
+    _PURGE_QUERIES = [
+        _DROP_PEERS_TABLE,
+        _DROP_TABLE_MESSAGES,
+    ]
+
+    """Settings"""
 
     _INSERT_SETTING = (
         'INSERT INTO settings(settings_key, settings_value) VALUES (:settings_key, :settings_value)'
@@ -60,7 +75,7 @@ class DB:
 
     _FIND_PID = 'SELECT settings_value FROM settings WHERE settings_key = :settings_key'
 
-    '''Peers'''
+    """Peers"""
 
     _INSERT_PEER_WITH_KEY = (
         'INSERT INTO peers (peer_id, name, ip, key) VALUES (:peer_id, :name, :ip, :key)'
@@ -85,19 +100,17 @@ class DB:
         ' WHERE name = :old_name'
     )
 
-    '''Messages'''
+    """Messages"""
 
     _INSERT_NEW_MESSAGE = (
-        'INSERT INTO messages (id, sender, body, received, seen, decrypted)'
-        ' VALUES (:id, :sender, :body, :received, :seen, :decrypted)'
+        'INSERT INTO messages (msg_id, sender, body, received, seen, decrypted)'
+        ' VALUES (:msg_id, :sender, :body, :received, :seen, :decrypted)'
     )
 
-    _FETCH_UNREAD_MESSAGES = (
-        'SELECT id, sender, body, decrypted FROM messages WHERE seen = false'
-    )
+    _FETCH_UNREAD_MESSAGES = 'SELECT msg_id, sender, body, received, seen, decrypted FROM messages WHERE seen = false'
 
     _UPDATE_MESSAGE_RECEIVED = (
-        'UPDATE messages SET received = true WHERE id = :id'
+        'UPDATE messages SET received = true WHERE msg_id = :msg_id'
     )
 
     @staticmethod
@@ -115,7 +128,7 @@ class DB:
         with get_cursor() as cursor:
             return cursor.execute(query, kwargs).fetchone()
 
-    '''Init'''
+    """Init"""
 
     @staticmethod
     def initialize():
@@ -123,7 +136,13 @@ class DB:
             for query in DB._INIT_QUERIES:
                 cursor.execute(query)
 
-    '''Daemon'''
+    @staticmethod
+    def purge():
+        with get_cursor() as cursor:
+            for query in DB._PURGE_QUERIES:
+                cursor.execute(query)
+
+    """Daemon"""
 
     @staticmethod
     def insert_setting(key: str, value: str):
@@ -137,7 +156,7 @@ class DB:
     def delete_setting(key):
         return DB._execute_fetchone(DB._DELETE_SETTING, settings_key=key)
 
-    '''Peers'''
+    """Peers"""
 
     @staticmethod
     def add_peer_with_key(peer_id: str, name: str, ip: str, key: str):
@@ -192,10 +211,12 @@ class DB:
     """Messages"""
 
     @staticmethod
-    def insert_message(msg_id: str, sender: str, body: str, received=False, seen=False, decrypted=False):
+    def insert_message(
+        msg_id: str, sender: str, body: str, received=False, seen=False, decrypted=False
+    ):
         return DB._execute(
             DB._INSERT_NEW_MESSAGE,
-            id=msg_id,
+            msg_id=msg_id,
             sender=sender,
             body=body,
             received=received,
@@ -209,7 +230,7 @@ class DB:
 
     @staticmethod
     def update_message_received(msg_id):
-        return DB._execute(DB._UPDATE_MESSAGE_RECEIVED, id=msg_id)
+        return DB._execute(DB._UPDATE_MESSAGE_RECEIVED, msg_id=msg_id)
 
 
 def get_peer_id():

@@ -37,9 +37,19 @@ def cli():
     pass
 
 
+@cli.command('purge')
+def purge():
+    db.DB.purge()
+
+
+@cli.command('init')
+def purge():
+    db.DB.initialize()
+
+
 @cli.group('id')
 def id_group():
-    """"Manipulate your ID"""
+    """ "Manipulate your ID"""
 
 
 @id_group.command('set')
@@ -166,7 +176,7 @@ def show_peer(name, peer_id, show_key):
         all_peers = [db.DB.fetch_peer_by_id(peer_id)]
 
     if not any(all_peers):
-        logging.info('Could not find peers')
+        print('Could not find peers')
         return
     if show_key:
         all_peers = list(map(lambda x: x.show_key(), all_peers))
@@ -216,7 +226,9 @@ def send_message(name):
         'type': models.MessageType.MESSAGE.value,
         'body': text,
     }
-    db.DB.insert_message(msg['id'], db.get_peer_id(), text, received=False, seen=False, decrypted=True)
+    db.DB.insert_message(
+        msg['id'], db.get_peer_id(), text, received=False, seen=False, decrypted=True
+    )
     success = transmitter.transmit(peer, msg)
     if not success:
         logging.warning('Could not transmit message to anybody')
@@ -236,9 +248,7 @@ def read_messages():
 
 if __name__ == '__main__':
     if init():
-        print(
-            '\nNew ID was generated for you: {}\n'.format(db.get_peer_id())
-        )
+        print('\nNew ID was generated for you: {}\n'.format(db.get_peer_id()))
     else:
         print('\nYour ID is {}\n'.format(db.get_peer_id()))
     cli()

@@ -28,7 +28,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         logging.info('Handle request')
         peer = db.DB.fetch_peer_by_ip(self.client_address[0])
         if not peer:
-            logging.error('Cannot handle request: do not have peer with ip=%s', self.client_address[0])
+            logging.error(
+                'Cannot handle request: do not have peer with ip=%s',
+                self.client_address[0],
+            )
             return
         tcp = transport.Transport(self.request, peer)
         data = tcp.receive_all()
@@ -74,7 +77,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         return
 
     def handle_ack(self, data, peer):
-        db.DB.insert_message()
+        logging.info('Received ACK for msg_id=%s', data['id'])
+        db.DB.update_message_received(data['id'])
 
     def save_message(self, data):
         body = data['body']
@@ -91,7 +95,14 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         else:
             db.DB.add_peer_only_required(data['from'], data['from'])
 
-        db.DB.insert_message(data['id'], data['from'], body, received=True, seen=False, decrypted=decrypted)
+        db.DB.insert_message(
+            data['id'],
+            data['from'],
+            body,
+            received=True,
+            seen=False,
+            decrypted=decrypted,
+        )
 
 
 if __name__ == '__main__':
