@@ -124,7 +124,7 @@ class DB:
     )
 
     _FETCH_ALL_MESSAGES = (
-        'SELECT id'
+        'SELECT id,'
         ' msg_id,'
         ' created_at,'
         ' sender,'

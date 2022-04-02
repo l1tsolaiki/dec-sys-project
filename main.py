@@ -241,7 +241,6 @@ def send_message(name):
 @click.option('--limit', type=int, default=10)
 def read_messages(all, limit):
     def beautify_bools(tpl):
-        print(tpl)
         change_to_sign = lambda x: '✔' if x else '×'
         return (
             tpl[1],
