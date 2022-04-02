@@ -142,7 +142,7 @@ class DB:
             for query in DB._PURGE_QUERIES:
                 cursor.execute(query)
 
-    """Daemon"""
+    """Settings"""
 
     @staticmethod
     def insert_setting(key: str, value: str):

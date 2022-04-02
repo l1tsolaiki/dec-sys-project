@@ -63,7 +63,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         if msg_type == models.MessageType.MESSAGE.value:
             self.handle_message(data, peer)
         elif msg_type == models.MessageType.ACK.value:
-            self.handle_ack()
+            self.handle_ack(data, peer)
 
     def handle_message(self, data, peer):
         logging.info('Handling message..')

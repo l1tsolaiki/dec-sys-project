@@ -238,10 +238,15 @@ def send_message(name):
 
 @message.command('read')
 def read_messages():
+    def beautify_bools(tpl):
+        change_to_sign = lambda x: '✔' if x else '×'
+        return tpl[0], tpl[1], tpl[2], change_to_sign(tpl[3]), change_to_sign(tpl[4]), change_to_sign(tpl[5])
+
     messages = db.DB.fetch_unread_messages()
+    messages = list(map(beautify_bools, messages))
     print(
         tabulate.tabulate(
-            messages, headers=['ID', 'Sender Peer ID', 'Body', 'Decrypted']
+            messages, headers=['ID', 'Sender Peer ID', 'Body', 'Received', 'Seen', 'Decrypted']
         )
     )
 
