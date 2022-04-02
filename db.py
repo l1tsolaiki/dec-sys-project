@@ -111,7 +111,8 @@ class DB:
     )
 
     _FETCH_UNREAD_MESSAGES = (
-        'SELECT msg_id,'
+        'SELECT id,'
+        ' msg_id,'
         ' created_at,'
         ' sender,'
         ' body,'
@@ -123,12 +124,13 @@ class DB:
     )
 
     _FETCH_ALL_MESSAGES = (
-        'SELECT msg_id,'
+        'SELECT id'
+        ' msg_id,'
         ' created_at,'
         ' sender,'
         ' body,'
         ' received,'
-        ' seen'
+        ' seen,'
         ' decrypted'
         ' FROM messages ORDER BY id LIMIT :limit'
     )

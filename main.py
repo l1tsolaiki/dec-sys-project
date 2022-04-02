@@ -238,30 +238,31 @@ def send_message(name):
 
 @message.command('read')
 @click.option('-a', '--all', is_flag=True)
-@click.option('--limit', type=int)
+@click.option('--limit', type=int, default=10)
 def read_messages(all, limit):
     def beautify_bools(tpl):
+        print(tpl)
         change_to_sign = lambda x: '✔' if x else '×'
         return (
-            tpl[0],
             tpl[1],
             tpl[2],
             tpl[3],
-            change_to_sign(tpl[4]),
+            tpl[4],
             change_to_sign(tpl[5]),
             change_to_sign(tpl[6]),
+            change_to_sign(tpl[7]),
         )
 
     if all and not limit:
         print('You need to specify \'--limit\' with \'--all\'')
         return
 
-    cursor = int(db.get_msg_cursor())
+    cursor = db.get_msg_cursor()
 
     if all or not cursor:
         messages = db.DB.fetch_all_messages(limit)
     else:
-        messages = db.DB.fetch_messages_by_cursor(cursor)
+        messages = db.DB.fetch_messages_by_cursor(int(cursor))
 
     if messages:
         assert max([msg[0] for msg in messages]) == messages[-1][0]
