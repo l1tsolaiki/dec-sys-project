@@ -184,26 +184,26 @@ def show_peer(name, peer_id, show_key):
 
 
 @peers_group.command('edit')
-@click.argument('name')
-@click.option('--new-id', type=str)
-@click.option('--new-name', type=str)
-@click.option('--new-ip', type=str)
-@click.option('--new-key', type=str)
-def edit_peer(name, new_id, new_name, new_ip, new_key):
-    peer = db.DB.fetch_peer_by_name(name)
+@click.argument('peer_name')
+@click.option('--id', type=str)
+@click.option('--name', type=str)
+@click.option('--ip', type=str)
+@click.option('--key', type=str)
+def edit_peer(peer_name, id, name, ip, key):
+    peer = db.DB.fetch_peer_by_name(peer_name)
     if not peer:
         print('No such peer')
         return
 
-    if new_id:
-        peer.peer_id = new_id
-    if new_name:
-        peer.name = new_name
-    if new_ip:
-        peer.ip = new_ip
-    if new_key:
-        peer.key = new_key
-    db.DB.update_peer(name, peer.peer_id, peer.name, peer.ip, peer.key)
+    if id:
+        peer.peer_id = id
+    if name:
+        peer.name = name
+    if ip:
+        peer.ip = ip
+    if key:
+        peer.key = key
+    db.DB.update_peer(peer_name, peer.peer_id, peer.name, peer.ip, peer.key)
 
 
 @cli.group('message')
@@ -256,12 +256,23 @@ def read_messages(all, limit):
         print('You need to specify \'--limit\' with \'--all\'')
         return
 
-    messages = db.DB.fetch_unread_messages()
+    cursor = int(db.get_msg_cursor())
+
+    if all:
+        messages = db.DB.fetch_all_messages(limit)
+    else:
+        messages = db.DB.fetch_messages_by_cursor(cursor)
+
+    if messages:
+        assert max([msg[0] for msg in messages]) == messages[-1][0]
+        cursor = str(messages[-1][0])
+        db.update_msg_cursor(cursor)
+
     messages = list(map(beautify_bools, messages))
     print(
         tabulate.tabulate(
             messages,
-            headers=['ID', 'Sender Peer ID', 'Body', 'Received', 'Seen', 'Decrypted'],
+            headers=['ID', 'Sender Peer ID', 'Body', 'Created At', 'Received', 'Seen', 'Decrypted'],
         )
     )
 

@@ -45,16 +45,12 @@ class DB:
     )
 
     _CREATE_MESSAGES_INDEX = 'CREATE INDEX IF NOT EXISTS by_id ON messages(msg_id)'
-    _CREATE_MESSAGES_INDEX_BY_CREATED = (
-        'CREATE INDEX IF NOT EXISTS created ON messages(created_at DESC)'
-    )
 
     _INIT_QUERIES = [
         _CREATE_SETTINGS_TABLE,
         _CREATE_PEERS_TABLE,
         _CREATE_MESSAGES_TABLE,
         _CREATE_MESSAGES_INDEX,
-        _CREATE_MESSAGES_INDEX_BY_CREATED,
     ]
 
     """Purge"""
@@ -80,7 +76,7 @@ class DB:
 
     _DELETE_SETTING = 'DELETE FROM settings WHERE settings_key = :settings_key'
 
-    _FIND_PID = 'SELECT settings_value FROM settings WHERE settings_key = :settings_key'
+    _FETCH_SETTING = 'SELECT settings_value FROM settings WHERE settings_key = :settings_key'
 
     """Peers"""
 
@@ -114,7 +110,28 @@ class DB:
         ' VALUES (:msg_id, :sender, :body, :received, :seen, :decrypted)'
     )
 
-    _FETCH_UNREAD_MESSAGES = 'SELECT msg_id, created_at, sender, body, received, seen, decrypted FROM messages WHERE seen = false'
+    _FETCH_UNREAD_MESSAGES = (
+        'SELECT msg_id,'
+        ' created_at,'
+        ' sender,'
+        ' body,'
+        ' received,'
+        ' seen,'
+        ' decrypted'
+        ' FROM messages WHERE id > :id'
+        ' ORDER BY id'
+    )
+
+    _FETCH_ALL_MESSAGES = (
+        'SELECT msg_id,'
+        ' created_at,'
+        ' sender,'
+        ' body,'
+        ' received,'
+        ' seen'
+        ' decrypted'
+        ' FROM messages ORDER BY id LIMIT :limit'
+    )
 
     _UPDATE_MESSAGE_RECEIVED = (
         'UPDATE messages SET received = true WHERE msg_id = :msg_id'
@@ -157,7 +174,7 @@ class DB:
 
     @staticmethod
     def fetch_setting(key):
-        return DB._execute_fetchone(DB._FIND_PID, settings_key=key)
+        return DB._execute_fetchone(DB._FETCH_SETTING, settings_key=key)
 
     @staticmethod
     def delete_setting(key):
@@ -232,8 +249,12 @@ class DB:
         )
 
     @staticmethod
-    def fetch_unread_messages():
-        return DB._execute_fetchall(DB._FETCH_UNREAD_MESSAGES)
+    def fetch_all_messages(limit):
+        return DB._execute_fetchall(DB._FETCH_ALL_MESSAGES, limit=limit)
+
+    @staticmethod
+    def fetch_messages_by_cursor(cursor):
+        return DB._execute_fetchall(DB._FETCH_UNREAD_MESSAGES, id=cursor)
 
     @staticmethod
     def update_message_received(msg_id):
@@ -242,3 +263,11 @@ class DB:
 
 def get_peer_id():
     return DB.fetch_setting('peer_id')[0]
+
+
+def get_msg_cursor():
+    return DB.fetch_setting('cursor')[0]
+
+
+def update_msg_cursor(cursor):
+    return DB.insert_setting('cursor', cursor)
