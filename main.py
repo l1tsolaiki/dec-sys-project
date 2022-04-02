@@ -237,16 +237,31 @@ def send_message(name):
 
 
 @message.command('read')
-def read_messages():
+@click.option('-a', '--all', is_flag=True)
+@click.option('--limit', type=int)
+def read_messages(all, limit):
     def beautify_bools(tpl):
         change_to_sign = lambda x: '✔' if x else '×'
-        return tpl[0], tpl[1], tpl[2], change_to_sign(tpl[3]), change_to_sign(tpl[4]), change_to_sign(tpl[5])
+        return (
+            tpl[0],
+            tpl[1],
+            tpl[2],
+            tpl[3],
+            change_to_sign(tpl[4]),
+            change_to_sign(tpl[5]),
+            change_to_sign(tpl[6]),
+        )
+
+    if all and not limit:
+        print('You need to specify \'--limit\' with \'--all\'')
+        return
 
     messages = db.DB.fetch_unread_messages()
     messages = list(map(beautify_bools, messages))
     print(
         tabulate.tabulate(
-            messages, headers=['ID', 'Sender Peer ID', 'Body', 'Received', 'Seen', 'Decrypted']
+            messages,
+            headers=['ID', 'Sender Peer ID', 'Body', 'Received', 'Seen', 'Decrypted'],
         )
     )
 

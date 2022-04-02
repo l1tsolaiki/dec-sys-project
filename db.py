@@ -16,7 +16,7 @@ def get_cursor():
 
 class DB:
 
-    '''Init'''
+    """Init"""
 
     _CREATE_SETTINGS_TABLE = (
         'CREATE TABLE IF NOT EXISTS settings '
@@ -35,6 +35,7 @@ class DB:
     _CREATE_MESSAGES_TABLE = (
         'CREATE TABLE IF NOT EXISTS messages'
         ' (id INTEGER PRIMARY KEY AUTOINCREMENT,'
+        ' created_at DATETIME DEFAULT CURRENT_TIMESTAMP,'
         ' msg_id VARCHAR(40) NOT NULL,'
         ' sender VARCHAR (40) NOT NULL,'
         ' body TEXT NOT NULL,'
@@ -43,23 +44,29 @@ class DB:
         ' decrypted BOOLEAN NOT NULL)'
     )
 
-    _CREATE_MESSAGES_INDEX = 'CREATE INDEX IF NOT EXISTS unread ON messages(msg_id)'
+    _CREATE_MESSAGES_INDEX = 'CREATE INDEX IF NOT EXISTS by_id ON messages(msg_id)'
+    _CREATE_MESSAGES_INDEX_BY_CREATED = (
+        'CREATE INDEX IF NOT EXISTS created ON messages(created_at DESC)'
+    )
 
     _INIT_QUERIES = [
         _CREATE_SETTINGS_TABLE,
         _CREATE_PEERS_TABLE,
         _CREATE_MESSAGES_TABLE,
         _CREATE_MESSAGES_INDEX,
+        _CREATE_MESSAGES_INDEX_BY_CREATED,
     ]
 
     """Purge"""
 
     _DROP_PEERS_TABLE = 'DROP TABLE IF EXISTS peers'
     _DROP_TABLE_MESSAGES = 'DROP TABLE IF EXISTS MESSAGES'
+    _DROP_CURSOR = 'UPDATE SETTINGS SET settings_value = null WHERE settings_key = \'cursor\''
 
     _PURGE_QUERIES = [
         _DROP_PEERS_TABLE,
         _DROP_TABLE_MESSAGES,
+        _DROP_CURSOR,
     ]
 
     """Settings"""
@@ -107,7 +114,7 @@ class DB:
         ' VALUES (:msg_id, :sender, :body, :received, :seen, :decrypted)'
     )
 
-    _FETCH_UNREAD_MESSAGES = 'SELECT msg_id, sender, body, received, seen, decrypted FROM messages WHERE seen = false'
+    _FETCH_UNREAD_MESSAGES = 'SELECT msg_id, created_at, sender, body, received, seen, decrypted FROM messages WHERE seen = false'
 
     _UPDATE_MESSAGE_RECEIVED = (
         'UPDATE messages SET received = true WHERE msg_id = :msg_id'
