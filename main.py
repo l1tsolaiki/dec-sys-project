@@ -258,7 +258,7 @@ def read_messages(all, limit):
 
     cursor = int(db.get_msg_cursor())
 
-    if all:
+    if all or not cursor:
         messages = db.DB.fetch_all_messages(limit)
     else:
         messages = db.DB.fetch_messages_by_cursor(cursor)
